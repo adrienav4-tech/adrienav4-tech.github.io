@@ -21,6 +21,9 @@
   --noir-soft: #222222;
   --radius: 4px;
   --radius-md: 8px;
+  --vert: #2E7D32;
+  --vert-pale: rgba(46,125,50,0.07);
+  --vert-border: rgba(46,125,50,0.25);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -200,7 +203,7 @@ header {
   font-size: 9px; color: var(--gris-texte); margin-right: 14px;
 }
 .h-status-dot {
-  width: 6px; height: 6px; border-radius: 50%; background: #2E7D32;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--vert);
   animation: pulse 2s infinite;
 }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
@@ -283,8 +286,8 @@ header {
   padding: 1px 7px; border-radius: 10px;
 }
 .msg-carbon {
-  font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #2E7D32;
-  background: rgba(46,125,50,0.07); border: 1px solid rgba(46,125,50,0.25);
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--vert);
+  background: var(--vert-pale); border: 1px solid var(--vert-border);
   padding: 1px 7px; border-radius: 10px;
   display: flex; align-items: center; gap: 3px;
 }
@@ -357,6 +360,10 @@ header {
   font-family: 'Libre Baskerville', serif;
   font-size: 15px; font-weight: 700; color: var(--noir); margin-bottom: 10px;
 }
+.doc-count {
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+  color: var(--gris-texte); letter-spacing: 0.06em; margin-bottom: 8px;
+}
 .doc-search-input {
   width: 100%; border: 1.5px solid var(--gris); border-radius: var(--radius);
   padding: 7px 10px; font-family: 'IBM Plex Sans', sans-serif;
@@ -376,12 +383,25 @@ header {
 .doc-item:hover { background: var(--gris-clair); }
 .doc-item.active { background: var(--rouge-pale); border-left-color: var(--rouge); }
 .doc-item-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; color: var(--rouge); }
-.doc-item-info { display: flex; flex-direction: column; gap: 1px; }
-.doc-item-name { font-size: 12px; font-weight: 500; color: var(--noir); line-height: 1.3; }
+.doc-item-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.doc-item-name {
+  font-size: 12px; font-weight: 500; color: var(--noir); line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .doc-item-meta {
   font-family: 'IBM Plex Mono', monospace; font-size: 9px;
   color: var(--gris-texte); letter-spacing: 0.04em;
 }
+.doc-list-empty {
+  padding: 32px 16px; text-align: center;
+  font-size: 12px; color: var(--gris-texte); line-height: 1.6;
+}
+.doc-list-loading {
+  padding: 20px 16px; text-align: center;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--gris-texte);
+}
+
+/* Upload zone — prof seulement */
 .doc-upload-zone { padding: 10px; border-top: 1px solid var(--gris); }
 .upload-label {
   display: block; border: 1.5px dashed var(--gris); border-radius: var(--radius);
@@ -390,6 +410,8 @@ header {
 }
 .upload-label:hover { border-color: var(--rouge); color: var(--rouge); }
 #pdf-upload { display: none; }
+
+/* PDF viewer */
 .pdf-viewer { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .pdf-toolbar {
   height: 42px; border-bottom: 1px solid var(--gris);
@@ -405,60 +427,60 @@ header {
   padding: 4px 10px; font-size: 11px; color: var(--noir); cursor: pointer;
   transition: border-color 0.15s, color 0.15s; font-family: 'IBM Plex Sans', sans-serif;
 }
-.pdf-nav:hover { border-color: var(--rouge); color: var(--rouge); }
-.pdf-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.pdf-nav:hover:not(:disabled) { border-color: var(--rouge); color: var(--rouge); }
+.pdf-nav:disabled { opacity: 0.35; cursor: not-allowed; }
 .pdf-page-info {
   font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--gris-texte);
   min-width: 60px; text-align: center;
 }
+.pdf-zoom-btn {
+  background: var(--blanc); border: 1px solid var(--gris); border-radius: var(--radius);
+  padding: 4px 8px; font-size: 11px; color: var(--noir); cursor: pointer;
+  transition: border-color 0.15s; font-family: 'IBM Plex Mono', monospace;
+}
+.pdf-zoom-btn:hover { border-color: var(--rouge); color: var(--rouge); }
+.pdf-dl-btn {
+  background: transparent; border: 1px solid var(--gris); border-radius: var(--radius);
+  padding: 4px 10px; font-size: 10px; color: var(--gris-texte); cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace; text-decoration: none;
+  transition: border-color 0.15s, color 0.15s; white-space: nowrap;
+}
+.pdf-dl-btn:hover { border-color: var(--rouge); color: var(--rouge); }
 .pdf-body {
-  flex: 1; overflow-y: auto; padding: 24px; background: var(--gris-clair);
+  flex: 1; overflow-y: auto; overflow-x: auto; padding: 24px; background: #e8e8e8;
   display: flex; flex-direction: column; align-items: center; gap: 16px;
 }
-.pdf-body::-webkit-scrollbar { width: 4px; }
-.pdf-body::-webkit-scrollbar-thumb { background: var(--gris); }
+.pdf-body::-webkit-scrollbar { width: 6px; height: 6px; }
+.pdf-body::-webkit-scrollbar-thumb { background: #c0c0c0; border-radius: 3px; }
 .pdf-placeholder {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 12px; color: var(--gris-mid);
+  height: 100%;
 }
-.pdf-placeholder-icon { font-size: 40px; opacity: 0.5; }
-.pdf-placeholder-text { font-size: 12px; line-height: 1.6; color: var(--gris-texte); text-align: center; }
-.pdf-page-card {
-  width: 100%; max-width: 660px; background: var(--blanc);
-  border: 1px solid var(--gris); border-radius: var(--radius-md); overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-}
-.pdf-page-head {
-  background: var(--rouge); padding: 7px 14px;
-  display: flex; justify-content: space-between;
-  font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em;
-  color: rgba(255,255,255,0.85);
-}
-.pdf-page-text {
-  padding: 26px 30px; font-size: 13px; line-height: 1.85;
-  color: var(--noir); white-space: pre-wrap;
-}
-
-/* PDF.js canvas rendering */
-.pdf-canvas-wrap {
-  width: 100%; max-width: 700px; background: var(--blanc);
-  border: 1px solid var(--gris); border-radius: var(--radius-md); overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-}
-.pdf-canvas-head {
-  background: var(--rouge); padding: 7px 14px;
-  display: flex; justify-content: space-between;
-  font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em;
-  color: rgba(255,255,255,0.85);
-}
-.pdf-canvas-wrap canvas {
-  display: block; width: 100%; height: auto;
-}
+.pdf-placeholder-icon { font-size: 48px; opacity: 0.4; }
+.pdf-placeholder-text { font-size: 12px; line-height: 1.7; color: var(--gris-texte); text-align: center; }
 .pdf-loading {
-  padding: 40px; text-align: center;
-  font-size: 12px; color: var(--gris-texte);
-  font-family: 'IBM Plex Mono', monospace;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 60px; color: var(--gris-texte);
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
 }
+.pdf-spinner {
+  width: 28px; height: 28px; border: 2px solid var(--gris);
+  border-top-color: var(--rouge); border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Canvas wrap */
+.pdf-canvas-wrap {
+  background: var(--blanc);
+  border-radius: 2px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+.pdf-canvas-wrap:hover { box-shadow: 0 6px 28px rgba(0,0,0,0.22); }
+.pdf-canvas-wrap canvas { display: block; }
 
 /* ── CACHE PANEL ── */
 #panel-cache { flex-direction: column; overflow-y: auto; }
@@ -523,7 +545,7 @@ header {
   color: var(--gris-texte); font-size: 13px; line-height: 1.7;
 }
 
-/* ── MODAL ── */
+/* ── MODALS ── */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200;
   display: flex; align-items: center; justify-content: center; padding: 24px;
@@ -607,6 +629,7 @@ header {
 </head>
 <body>
 
+<!-- ── ROLE SCREEN ── -->
 <div id="role-screen">
   <div class="rs-eyebrow">Assistant pédagogique · RAG</div>
   <div class="rs-logo-bar">
@@ -633,6 +656,7 @@ header {
   </div>
 </div>
 
+<!-- ── PASSWORD MODAL ── -->
 <div id="pwd-overlay">
   <div class="pwd-box">
     <div style="display:flex;align-items:center;gap:10px;">
@@ -651,6 +675,7 @@ header {
   </div>
 </div>
 
+<!-- ── APP ── -->
 <div id="app" style="display:none;">
   <header>
     <div class="h-blason">🦁</div>
@@ -665,11 +690,11 @@ header {
       <div class="h-status-dot" id="ollama-dot"></div>
       <span id="ollama-label">ollama · qwen2.5:1.5b</span>
     </div>
-    <div class="h-status" id="carbon-counter" style="margin-right:14px;color:#2E7D32;border:1px solid rgba(46,125,50,0.25);background:rgba(46,125,50,0.06);border-radius:12px;padding:3px 10px;gap:5px;">
+    <div class="h-status" id="carbon-counter" style="margin-right:14px;color:var(--vert);border:1px solid var(--vert-border);background:var(--vert-pale);border-radius:12px;padding:3px 10px;gap:5px;">
       <span style="font-size:11px;">🌿</span>
-      <span id="carbon-total-label" style="color:#2E7D32;">0.000 mgCO₂</span>
+      <span id="carbon-total-label" style="color:var(--vert);">0.000 mgCO₂</span>
     </div>
-    <div class="h-role-pill" id="role-pill" onclick="resetRole()">
+    <div class="h-role-pill" id="role-pill" onclick="resetRole()" title="Changer de rôle">
       <div class="h-role-dot"></div>
       <span id="role-pill-text">—</span>
     </div>
@@ -684,6 +709,7 @@ header {
 
   <div class="main-area">
 
+    <!-- CHAT -->
     <div class="panel active" id="panel-chat">
       <div class="cache-suggest-bar" id="suggest-bar">
         <span class="cache-suggest-label">Questions prof ·</span>
@@ -694,7 +720,7 @@ header {
           <div class="msg-avatar">ECL</div>
           <div class="msg-body">
             <div class="msg-meta"><div class="msg-role">Assistant RAG</div></div>
-            <div class="msg-bubble" id="welcome-bubble">Bonjour. Posez une question sur vos cours.</div>
+            <div class="msg-bubble">Bonjour. Posez une question sur vos cours.</div>
           </div>
         </div>
       </div>
@@ -711,37 +737,57 @@ header {
       </div>
     </div>
 
+    <!-- DOCUMENTS -->
     <div class="panel" id="panel-docs">
       <div class="doc-sidebar">
         <div class="doc-sidebar-header">
           <div class="doc-sidebar-title">Documents indexés</div>
-          <input type="text" class="doc-search-input" placeholder="Rechercher un cours…" oninput="filterDocs(this.value)">
+          <div class="doc-count" id="doc-count">Chargement…</div>
+          <input type="text" class="doc-search-input" id="doc-search"
+            placeholder="Rechercher un cours…" oninput="filterDocs(this.value)">
         </div>
-        <div class="doc-list" id="doc-list"></div>
-        <div class="doc-upload-zone">
+        <div class="doc-list" id="doc-list">
+          <div class="doc-list-loading">
+            <div style="margin-bottom:8px;">⏳</div>
+            Récupération des documents…
+          </div>
+        </div>
+        <!-- Zone upload visible uniquement pour les profs -->
+        <div class="doc-upload-zone" id="upload-zone" style="display:none;">
           <label class="upload-label" for="pdf-upload">
             ＋ Charger un PDF local<br>
-            <span style="font-size:10px;color:var(--gris-mid)">Toutes les pages lisibles</span>
+            <span style="font-size:10px;color:var(--gris-mid)">Visualisation immédiate</span>
           </label>
           <input type="file" id="pdf-upload" accept=".pdf" onchange="loadLocalPDF(this)">
         </div>
       </div>
+
       <div class="pdf-viewer">
         <div class="pdf-toolbar">
           <div class="pdf-toolbar-title" id="pdf-title">Aucun document sélectionné</div>
+          <button class="pdf-zoom-btn" onclick="changeZoom(-0.2)" title="Zoom arrière">−</button>
+          <span id="zoom-label" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--gris-texte);min-width:36px;text-align:center;">150%</span>
+          <button class="pdf-zoom-btn" onclick="changeZoom(0.2)" title="Zoom avant">＋</button>
+          <div style="width:1px;height:20px;background:var(--gris);margin:0 4px;"></div>
           <button class="pdf-nav" id="btn-prev" onclick="changePage(-1)" disabled>◀ Préc.</button>
           <div class="pdf-page-info" id="page-info">— / —</div>
           <button class="pdf-nav" id="btn-next" onclick="changePage(1)" disabled>Suiv. ▶</button>
+          <div style="width:1px;height:20px;background:var(--gris);margin:0 4px;"></div>
+          <a id="pdf-dl-link" class="pdf-dl-btn" href="#" target="_blank" style="display:none;">↓ PDF</a>
         </div>
         <div class="pdf-body" id="pdf-body">
           <div class="pdf-placeholder">
             <div class="pdf-placeholder-icon">📄</div>
-            <div class="pdf-placeholder-text">Sélectionnez un document dans la liste</div>
+            <div class="pdf-placeholder-text">
+              Sélectionnez un document dans la liste<br>
+              <span style="font-size:10px;color:var(--gris-mid);">pour le consulter ici</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- CACHE -->
     <div class="panel" id="panel-cache">
       <div class="cache-page-inner">
         <div class="cache-page-header">
@@ -749,7 +795,7 @@ header {
             <div class="cache-page-title">Cache des requêtes</div>
             <div class="cache-page-sub" id="cache-sub">Historique des questions enregistrées</div>
           </div>
-          <button class="cache-clear-btn" id="cache-clear-btn" onclick="clearCache()">🗑 Vider le cache</button>
+          <button class="cache-clear-btn" id="cache-clear-btn" onclick="clearCache()" style="display:none;">🗑 Vider le cache</button>
         </div>
         <div class="cache-readonly-notice hidden" id="cache-readonly-notice">
           👁 Mode lecture seule — consultez les questions posées par les professeurs.
@@ -761,6 +807,7 @@ header {
   </div>
 </div>
 
+<!-- ── MODAL CACHE ── -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalOverlay(event)">
   <div class="modal">
     <div class="modal-header">
@@ -771,7 +818,7 @@ header {
       <div class="modal-header-right">
         <button class="modal-close" onclick="closeModalDirect()">✕</button>
         <div class="modal-cost-badge" id="modal-cost-badge"></div>
-        <div id="modal-carbon-badge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#2E7D32;background:rgba(46,125,50,0.07);border:1px solid rgba(46,125,50,0.25);padding:2px 8px;border-radius:10px;display:none;"></div>
+        <div id="modal-carbon-badge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--vert);background:var(--vert-pale);border:1px solid var(--vert-border);padding:2px 8px;border-radius:10px;display:none;"></div>
       </div>
     </div>
     <div class="modal-body">
@@ -797,40 +844,50 @@ let currentRole = null;
 let chatHistory = [];
 let profCache = JSON.parse(localStorage.getItem('ecl_prof_cache') || '[]');
 let selectedDocIdx = null;
-let currentPage = 0;
-let pdfPages = [];
 let filteredDocs = [];
 let currentModalEntry = null;
+let MOCK_DOCS = [];
 
+// PDF state
 let pdfDoc = null;
-let pdfMode = 'mock';
+let currentPage = 1;
 let totalPdfPages = 0;
+let currentScale = 1.5;
+let renderTask = null; // pour annuler un render en cours
 
 const COST_PER_TOKEN = 0.000003;
 const PROF_PASSWORD = 'ECL2024';
 const BACKEND = 'http://localhost:8000';
+const GH_USER = 'adrienav4-tech';
+const GH_REPO = 'adrienav4-tech.github.io';
+const GH_FOLDER = 'db_centrale_lyon';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-let MOCK_DOCS = []; // Sera rempli par l'API GitHub
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 // ── ROLE & NAVIGATION ──────────────────────────────────────────
 function selectRole(role) {
   currentRole = role;
   document.getElementById('role-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
+
   const pill = document.getElementById('role-pill');
   pill.className = 'h-role-pill ' + role;
-  document.getElementById('role-pill-text').textContent = role === 'prof' ? 'Professeur' : 'Élève';
-  
+  document.getElementById('role-pill-text').textContent =
+    role === 'prof' ? 'Professeur' : 'Élève';
+
+  // Cache : prof peut vider, élève voit en lecture seule
   if (role === 'prof') {
     document.getElementById('cache-clear-btn').style.display = '';
     document.getElementById('cache-readonly-notice').classList.add('hidden');
+    document.getElementById('upload-zone').style.display = '';   // upload visible pour prof
   } else {
     document.getElementById('cache-clear-btn').style.display = 'none';
     document.getElementById('cache-readonly-notice').classList.remove('hidden');
+    document.getElementById('upload-zone').style.display = 'none'; // pas d'upload pour élève
     showSuggestBar();
   }
+
   fetchGitHubDocs();
   renderCache();
   checkOllamaStatus();
@@ -845,28 +902,59 @@ function showTab(tab, btn) {
   (btn || document.querySelector(`[data-tab="${tab}"]`))?.classList.add('active');
 }
 
+// ── SUGGEST BAR (élèves) ───────────────────────────────────────
+function showSuggestBar() {
+  if (!profCache.length) return;
+  const bar = document.getElementById('suggest-bar');
+  const pills = document.getElementById('suggest-pills');
+  pills.innerHTML = profCache.slice(0, 5).map(e =>
+    `<div class="cache-suggest-pill" onclick="injectQuestion('${e.question.replace(/'/g,"\\'")}')">
+      ${e.question.length > 50 ? e.question.slice(0, 50) + '…' : e.question}
+    </div>`
+  ).join('');
+  bar.classList.add('visible');
+}
+
+function injectQuestion(q) {
+  const input = document.getElementById('chat-input');
+  input.value = q;
+  autoResize(input);
+  input.focus();
+}
+
 // ── CHAT ───────────────────────────────────────────────────────
-function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-function autoResize(ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 100) + 'px'; }
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
+}
 
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const query = input.value.trim();
   if (!query) return;
   input.value = '';
+  autoResize(input);
   document.getElementById('send-btn').disabled = true;
   appendMsg('user', query, currentRole === 'prof' ? 'Professeur' : 'Élève', [], null);
   const typingEl = appendTyping();
+
   try {
     const data = await callBackend(query);
     typingEl.remove();
     const costLabel = `~${data.tokens_est} tokens · ${data.cost_eur.toFixed(5)} €`;
     appendMsg('assistant', data.response, 'Assistant RAG', data.sources || [], costLabel, data.co2_label);
+    chatHistory.push({ role: 'user', content: query });
+    chatHistory.push({ role: 'assistant', content: data.response });
     if (currentRole === 'prof') saveToProfCache(query, data.response, costLabel, data.co2_label);
   } catch (err) {
     typingEl.remove();
-    appendMsg('assistant', "Erreur connexion backend.", 'Système', [], null);
+    appendMsg('assistant', '⚠ Impossible de joindre le backend. Vérifiez qu\'Ollama est lancé.', 'Système', [], null);
   }
+
   document.getElementById('send-btn').disabled = false;
   scrollBottom();
 }
@@ -877,6 +965,7 @@ async function callBackend(query) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, history: chatHistory.slice(-6) })
   });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
@@ -890,8 +979,10 @@ function appendMsg(role, text, label, sources, cost, carbon) {
       <div class="msg-meta">
         <div class="msg-role">${label}</div>
         ${cost ? `<div class="msg-cost">${cost}</div>` : ''}
+        ${carbon ? `<div class="msg-carbon">🌿 ${carbon}</div>` : ''}
       </div>
-      <div class="msg-bubble">${text.replace(/\n/g, '<br>')}</div>
+      <div class="msg-bubble">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>
+      ${sources && sources.length ? `<div class="msg-sources">${sources.map(s => `<span class="source-chip">📄 ${s}</span>`).join('')}</div>` : ''}
     </div>`;
   c.appendChild(div);
   return div;
@@ -901,42 +992,149 @@ function appendTyping() {
   const c = document.getElementById('chat-messages');
   const div = document.createElement('div');
   div.className = 'msg assistant';
-  div.innerHTML = `<div class="msg-avatar">ECL</div><div class="msg-body"><div class="msg-bubble">...</div></div>`;
+  div.innerHTML = `
+    <div class="msg-avatar">ECL</div>
+    <div class="msg-body">
+      <div class="msg-bubble">
+        <div class="typing"><span></span><span></span><span></span></div>
+      </div>
+    </div>`;
   c.appendChild(div);
+  scrollBottom();
   return div;
 }
 
-function scrollBottom() { const c = document.getElementById('chat-messages'); c.scrollTop = c.scrollHeight; }
+function scrollBottom() {
+  const c = document.getElementById('chat-messages');
+  c.scrollTop = c.scrollHeight;
+}
+
+// ── CACHE ──────────────────────────────────────────────────────
+function saveToProfCache(question, answer, cost, carbon) {
+  const entry = {
+    question, answer, cost, carbon,
+    time: new Date().toLocaleString('fr-FR')
+  };
+  profCache.unshift(entry);
+  localStorage.setItem('ecl_prof_cache', JSON.stringify(profCache));
+  renderCache();
+  showSuggestBar();
+}
+
+function renderCache() {
+  const grid = document.getElementById('cache-grid');
+  const sub = document.getElementById('cache-sub');
+  sub.textContent = `${profCache.length} question${profCache.length !== 1 ? 's' : ''} enregistrée${profCache.length !== 1 ? 's' : ''}`;
+
+  if (!profCache.length) {
+    grid.innerHTML = `<div class="cache-empty">Aucune question enregistrée.<br>Les questions posées en mode Professeur apparaîtront ici.</div>`;
+    return;
+  }
+  grid.innerHTML = profCache.map((e, i) => `
+    <div class="cache-entry" onclick="openModal(${i})">
+      <div class="cache-entry-top">
+        <div class="cache-entry-role">🎓 Professeur</div>
+        <div class="cache-entry-time">${e.time || ''}</div>
+      </div>
+      <div class="cache-entry-q">${e.question}</div>
+      <div class="cache-entry-a">${e.answer}</div>
+      <div class="cache-entry-footer">
+        <div class="cache-entry-cost">${e.cost || ''}</div>
+        <div class="cache-entry-cta">Voir →</div>
+      </div>
+    </div>`).join('');
+}
+
+function clearCache() {
+  if (!confirm('Vider tout le cache ?')) return;
+  profCache = [];
+  localStorage.removeItem('ecl_prof_cache');
+  renderCache();
+  document.getElementById('suggest-bar').classList.remove('visible');
+}
+
+// ── MODAL CACHE ────────────────────────────────────────────────
+function openModal(idx) {
+  const e = profCache[idx];
+  currentModalEntry = e;
+  document.getElementById('modal-title').textContent = e.question;
+  document.getElementById('modal-q-block').textContent = e.question;
+  document.getElementById('modal-a-block').textContent = e.answer;
+  document.getElementById('modal-cost-badge').textContent = e.cost || '';
+  const cb = document.getElementById('modal-carbon-badge');
+  if (e.carbon) { cb.textContent = '🌿 ' + e.carbon; cb.style.display = ''; }
+  else { cb.style.display = 'none'; }
+  document.getElementById('modal-time').textContent = e.time || '';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModalDirect() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function closeModalOverlay(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
+}
+
+function injectFromModal() {
+  if (!currentModalEntry) return;
+  closeModalDirect();
+  showTab('chat');
+  injectQuestion(currentModalEntry.question);
+}
 
 // ── DOCUMENTS ──────────────────────────────────────────────────
 async function fetchGitHubDocs() {
-  const user = "adrienav4-tech", repo = "adrienav4-tech.github.io", folder = "db_centrale_lyon";
   try {
-    const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${folder}`);
+    const res = await fetch(
+      `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FOLDER}`
+    );
+    if (!res.ok) throw new Error(`GitHub API: ${res.status}`);
     const files = await res.json();
-    if (Array.isArray(files)) {
-      MOCK_DOCS = files.filter(f => f.name.endsWith('.pdf')).map(f => ({
-        name: f.name.replace('.pdf', ''),
-        pages: "PDF",
-        subject: "Cours",
-        url: f.download_url
+
+    if (!Array.isArray(files)) throw new Error('Réponse inattendue de l\'API GitHub');
+
+    MOCK_DOCS = files
+      .filter(f => f.name.toLowerCase().endsWith('.pdf'))
+      .map(f => ({
+        name: f.name.replace(/\.pdf$/i, ''),
+        filename: f.name,
+        url: f.download_url,
+        size: f.size
       }));
-      filteredDocs = [...MOCK_DOCS];
-      renderDocs();
-    }
-  } catch (e) { console.error(e); }
+
+    filteredDocs = [...MOCK_DOCS];
+    document.getElementById('doc-count').textContent =
+      `${MOCK_DOCS.length} document${MOCK_DOCS.length !== 1 ? 's' : ''} indexé${MOCK_DOCS.length !== 1 ? 's' : ''}`;
+    renderDocs();
+
+  } catch (e) {
+    console.error('fetchGitHubDocs:', e);
+    document.getElementById('doc-list').innerHTML =
+      `<div class="doc-list-empty">⚠ Impossible de charger les documents.<br>${e.message}</div>`;
+    document.getElementById('doc-count').textContent = 'Erreur de chargement';
+  }
 }
 
 function renderDocs(filter) {
   const list = document.getElementById('doc-list');
-  filteredDocs = filter
-    ? MOCK_DOCS.filter(d => d.name.toLowerCase().includes(filter.toLowerCase()))
+  const q = (filter || '').toLowerCase();
+  filteredDocs = q
+    ? MOCK_DOCS.filter(d => d.name.toLowerCase().includes(q))
     : [...MOCK_DOCS];
 
+  if (!filteredDocs.length) {
+    list.innerHTML = `<div class="doc-list-empty">${q ? 'Aucun résultat pour «&nbsp;' + q + '&nbsp;»' : 'Aucun document trouvé dans le dépôt.'}</div>`;
+    return;
+  }
+
   list.innerHTML = filteredDocs.map((d, i) => `
-    <div class="doc-item ${selectedDocIdx === i ? 'active' : ''}" onclick="(${i})">
+    <div class="doc-item ${selectedDocIdx === i ? 'active' : ''}" onclick="selectDoc(${i})">
       <div class="doc-item-icon">📄</div>
-      <div class="doc-item-info"><div class="doc-item-name">${d.name}</div></div>
+      <div class="doc-item-info">
+        <div class="doc-item-name" title="${d.name}">${d.name}</div>
+        <div class="doc-item-meta">${d.size ? Math.round(d.size / 1024) + ' ko' : 'PDF'}</div>
+      </div>
     </div>`).join('');
 }
 
@@ -945,16 +1143,33 @@ function filterDocs(v) { renderDocs(v); }
 async function selectDoc(idx) {
   selectedDocIdx = idx;
   const doc = filteredDocs[idx];
-  document.getElementById('pdf-title').textContent = doc.name;
-  document.getElementById('btn-prev').disabled = false;
-  document.getElementById('btn-next').disabled = false;
 
+  // Mettre à jour la barre
+  document.getElementById('pdf-title').textContent = doc.name;
+  document.getElementById('btn-prev').disabled = true;
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('page-info').textContent = '— / —';
+
+  // Lien de téléchargement
+  const dlLink = document.getElementById('pdf-dl-link');
+  dlLink.href = doc.url;
+  dlLink.download = doc.filename || doc.name + '.pdf';
+  dlLink.style.display = '';
+
+  // Afficher le spinner
   const pdfBody = document.getElementById('pdf-body');
-  pdfBody.innerHTML = `<div class="pdf-loading">Chargement du PDF…</div>`;
+  pdfBody.innerHTML = `
+    <div class="pdf-loading">
+      <div class="pdf-spinner"></div>
+      Chargement de ${doc.name}…
+    </div>`;
+
+  // Redessiner la liste (item actif)
+  renderDocs(document.getElementById('doc-search').value);
 
   try {
-    // Récupère le PDF via fetch pour contourner les restrictions iframe
     const response = await fetch(doc.url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const arrayBuffer = await response.arrayBuffer();
 
     pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -964,42 +1179,57 @@ async function selectDoc(idx) {
     pdfBody.innerHTML = '';
     await renderPdfPage(currentPage);
     updatePageInfo();
-  } catch (e) {
-    console.error(e);
-    pdfBody.innerHTML = `<div class="pdf-placeholder">
-      <div class="pdf-placeholder-icon">⚠️</div>
-      <div class="pdf-placeholder-text">Impossible de charger le PDF.<br>
-        <a href="${doc.url}" target="_blank" style="color:var(--rouge)">Télécharger à la place</a>
-      </div>
-    </div>`;
-  }
 
-  renderDocs(document.querySelector('.doc-search-input').value);
+  } catch (e) {
+    console.error('selectDoc:', e);
+    pdfBody.innerHTML = `
+      <div class="pdf-placeholder">
+        <div class="pdf-placeholder-icon">⚠️</div>
+        <div class="pdf-placeholder-text">
+          Impossible de charger ce PDF.<br>
+          <span style="font-size:10px;color:var(--gris-mid)">${e.message}</span><br><br>
+          <a href="${doc.url}" target="_blank"
+             style="color:var(--rouge);font-size:12px;font-weight:500;">
+            ↓ Télécharger le fichier
+          </a>
+        </div>
+      </div>`;
+  }
 }
 
 async function renderPdfPage(pageNum) {
-  const pdfBody = document.getElementById('pdf-body');
-  const page = await pdfDoc.getPage(pageNum);
+  if (!pdfDoc) return;
 
-  const viewport = page.getViewport({ scale: 1.5 });
+  // Annuler le render précédent si toujours en cours
+  if (renderTask) {
+    renderTask.cancel();
+    renderTask = null;
+  }
+
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale: currentScale });
 
   const wrap = document.createElement('div');
   wrap.className = 'pdf-canvas-wrap';
 
-  const head = document.createElement('div');
-  head.className = 'pdf-canvas-head';
-  head.innerHTML = `<span>${document.getElementById('pdf-title').textContent}</span><span>Page ${pageNum} / ${totalPdfPages}</span>`;
-
   const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
   canvas.width = viewport.width;
   canvas.height = viewport.height;
 
-  wrap.appendChild(head);
   wrap.appendChild(canvas);
+
+  const pdfBody = document.getElementById('pdf-body');
   pdfBody.innerHTML = '';
   pdfBody.appendChild(wrap);
 
-  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+  renderTask = page.render({ canvasContext: ctx, viewport });
+  try {
+    await renderTask.promise;
+  } catch (e) {
+    if (e.name !== 'RenderingCancelledException') console.error(e);
+  }
+  renderTask = null;
 }
 
 function updatePageInfo() {
@@ -1010,33 +1240,105 @@ function updatePageInfo() {
 
 async function changePage(delta) {
   const newPage = currentPage + delta;
-  if (newPage < 1 || newPage > totalPdfPages) return;
+  if (newPage < 1 || newPage > totalPdfPages || !pdfDoc) return;
   currentPage = newPage;
   await renderPdfPage(currentPage);
   updatePageInfo();
-}
-// ── CACHE & STATUS ─────────────────────────────────────────────
-function renderCache() {
-  const grid = document.getElementById('cache-grid');
-  grid.innerHTML = profCache.map((e, i) => `<div class="cache-entry"><strong>${e.question}</strong><p>${e.answer.slice(0,100)}...</p></div>`).join('');
+  document.getElementById('pdf-body').scrollTop = 0;
 }
 
+async function changeZoom(delta) {
+  currentScale = Math.min(3, Math.max(0.5, +(currentScale + delta).toFixed(1)));
+  document.getElementById('zoom-label').textContent = Math.round(currentScale * 100) + '%';
+  if (pdfDoc) await renderPdfPage(currentPage);
+}
+
+// PDF local (prof seulement)
+async function loadLocalPDF(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // Ajouter à la liste
+  const localDoc = { name: file.name.replace(/\.pdf$/i, ''), filename: file.name, url: null, local: true, file };
+  MOCK_DOCS.unshift(localDoc);
+  filteredDocs = [...MOCK_DOCS];
+  document.getElementById('doc-count').textContent =
+    `${MOCK_DOCS.length} document${MOCK_DOCS.length !== 1 ? 's' : ''} indexé${MOCK_DOCS.length !== 1 ? 's' : ''}`;
+  renderDocs(document.getElementById('doc-search').value);
+
+  // Sélectionner directement
+  selectedDocIdx = 0;
+  document.getElementById('pdf-title').textContent = localDoc.name;
+  document.getElementById('btn-prev').disabled = true;
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('page-info').textContent = '— / —';
+  document.getElementById('pdf-dl-link').style.display = 'none';
+
+  const pdfBody = document.getElementById('pdf-body');
+  pdfBody.innerHTML = `<div class="pdf-loading"><div class="pdf-spinner"></div>Chargement…</div>`;
+  renderDocs(document.getElementById('doc-search').value);
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    totalPdfPages = pdfDoc.numPages;
+    currentPage = 1;
+    pdfBody.innerHTML = '';
+    await renderPdfPage(currentPage);
+    updatePageInfo();
+  } catch (e) {
+    pdfBody.innerHTML = `<div class="pdf-placeholder"><div class="pdf-placeholder-icon">⚠️</div><div class="pdf-placeholder-text">Erreur de lecture : ${e.message}</div></div>`;
+  }
+  input.value = '';
+}
+
+// ── STATUT OLLAMA ──────────────────────────────────────────────
 async function checkOllamaStatus() {
   const dot = document.getElementById('ollama-dot');
+  const label = document.getElementById('ollama-label');
   try {
-    const res = await fetch(`${BACKEND}/status`);
-    dot.style.background = res.ok ? '#2E7D32' : '#C8102E';
-  } catch { dot.style.background = '#C8102E'; }
+    const res = await fetch(`${BACKEND}/status`, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      dot.style.background = 'var(--vert)';
+      label.style.color = '';
+    } else {
+      dot.style.background = 'var(--rouge)';
+    }
+  } catch {
+    dot.style.background = '#aaa';
+  }
 }
 
-function askProfPassword() { document.getElementById('pwd-overlay').classList.add('open'); }
-function closePwd() { document.getElementById('pwd-overlay').classList.remove('open'); }
+// ── MOT DE PASSE PROF ─────────────────────────────────────────
+function askProfPassword() {
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('pwd-error').classList.remove('visible');
+  document.getElementById('pwd-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('pwd-input').focus(), 100);
+}
+
+function closePwd() {
+  document.getElementById('pwd-overlay').classList.remove('open');
+}
+
 function checkPwd() {
-  if (document.getElementById('pwd-input').value === PROF_PASSWORD) { closePwd(); selectRole('prof'); }
-  else { document.getElementById('pwd-error').classList.add('visible'); }
+  if (document.getElementById('pwd-input').value === PROF_PASSWORD) {
+    closePwd();
+    selectRole('prof');
+  } else {
+    document.getElementById('pwd-error').classList.add('visible');
+    document.getElementById('pwd-input').select();
+  }
 }
 
-setInterval(checkOllamaStatus, 10000);
+// ── INIT ───────────────────────────────────────────────────────
+setInterval(checkOllamaStatus, 15000);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModalDirect();
+    closePwd();
+  }
+});
 </script>
 </body>
 </html>
