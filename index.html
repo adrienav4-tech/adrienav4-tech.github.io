@@ -1238,23 +1238,42 @@ function renderDocs(filter) {
 function filterDocs(val) { renderDocs(val); }
 
 function selectDoc(idx) {
-    selectedDocIdx = idx;
-    const doc = filteredDocs[idx];
+  selectedDocIdx = idx;
+  const doc = filteredDocs[idx];
+  if (!doc) return;
+
+  renderDocs(document.querySelector('.doc-search-input').value);
+  document.getElementById('pdf-title').textContent = doc.name;
+
+  const pdfBody = document.getElementById('pdf-body');
+
+  // SI LE DOCUMENT VIENT DE GITHUB
+  if (doc.url) {
+    pdfMode = 'url';
+    document.getElementById('page-info').textContent = "Visualisation Directe";
+    document.getElementById('btn-prev').disabled = true;
+    document.getElementById('btn-next').disabled = true;
     
-    if (doc.url) {
-        document.getElementById('pdf-title').textContent = doc.name;
-        document.getElementById('pdf-body').innerHTML = `
-            <div class="pdf-placeholder">
-                <div class="pdf-placeholder-icon">🔗</div>
-                <div class="pdf-placeholder-text">
-                    Ce document est hébergé sur GitHub.<br><br>
-                    <a href="${doc.url}" target="_blank" style="color:var(--rouge); font-weight:bold; text-decoration:none; border:1px solid var(--rouge); padding:10px; border-radius:4px;">
-                        Ouvrir le PDF original
-                    </a>
-                </div>
-            </div>`;
-        return;
-    }
+    pdfBody.innerHTML = `
+      <div style="width:100%; height:100%; display:flex; flex-direction:column;">
+        <iframe src="${doc.url}" style="width:100%; height:80vh; border:none;" title="${doc.name}"></iframe>
+        <div style="padding:10px; text-align:center;">
+          <a href="${doc.url}" target="_blank" style="color:var(--rouge); font-size:12px; text-decoration:none; font-weight:bold;">
+             📥 Ouvrir/Télécharger le PDF original si l'aperçu ne s'affiche pas
+          </a>
+        </div>
+      </div>`;
+  } 
+  // SINON (Si c'est un mock ou un fichier local chargé à la main)
+  else {
+    pdfDoc = null;
+    pdfMode = 'mock';
+    pdfPages = getSampleContent(doc.name);
+    totalPdfPages = pdfPages.length;
+    currentPage = 0;
+    updateNavButtons();
+    renderMockPage(doc);
+  }
 }
 
 function renderMockPage(doc) {
