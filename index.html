@@ -320,6 +320,21 @@ header {
 .typing span:nth-child(2) { animation-delay: 0.2s; }
 .typing span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
+
+/* Bouton sauvegarde prof */
+.save-cache-btn {
+  background: var(--blanc); border: 1.5px solid var(--gris); border-radius: 20px;
+  padding: 4px 12px; font-size: 10px; color: var(--gris-texte); cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif; transition: all 0.15s;
+  margin-top: 6px; align-self: flex-start;
+}
+.save-cache-btn:hover:not(:disabled) {
+  border-color: var(--vert); color: var(--vert); background: var(--vert-pale);
+}
+.save-cache-btn:disabled {
+  opacity: 0.6; cursor: default; color: var(--vert); border-color: var(--vert);
+}
+
 .chat-footer {
   border-top: 1px solid var(--gris); background: var(--blanc); padding: 12px 20px;
 }
@@ -525,6 +540,14 @@ header {
   letter-spacing: 0.1em; color: var(--rouge); text-transform: uppercase;
 }
 .cache-entry-time { font-family: 'IBM Plex Mono', monospace; font-size: 8px; color: var(--gris-texte); }
+
+/* Bouton corbeille */
+.delete-entry-btn {
+  background: transparent; border: none; font-size: 12px; cursor: pointer;
+  color: var(--gris-mid); transition: color 0.15s; padding: 2px; line-height: 1;
+}
+.delete-entry-btn:hover { color: var(--rouge); }
+
 .cache-entry-q { font-size: 13px; font-weight: 600; color: var(--noir); line-height: 1.4; }
 .cache-entry-a {
   font-size: 12px; color: var(--gris-texte); line-height: 1.5;
@@ -648,7 +671,7 @@ header {
     <div class="rs-card" onclick="askProfPassword()">
       <div class="rs-card-icon">🎓</div>
       <div class="rs-card-title">Professeur</div>
-      <div class="rs-card-desc">Vos requêtes sont enregistrées dans le cache partagé, visibles par tous les élèves.</div>
+      <div class="rs-card-desc">Vos requêtes peuvent être enregistrées dans le cache partagé pour être visibles par tous les élèves.</div>
       <div class="rs-card-badge">ADMIN</div>
       <div class="rs-card-arrow">→</div>
     </div>
@@ -700,7 +723,7 @@ header {
   <div class="disclaimer-bar">
     <span class="disclaimer-icon">ℹ️</span>
     <span class="disclaimer-text">
-      <strong>Transparence & Éco-conception :</strong> Ce RAG fonctionne 100% en local. Le <strong>coût en euros</strong> affiché est une estimation pédagogique simulant une facturation Cloud standard (0,003 € / 1k tokens), bien que l'inférence soit gratuite. L'<strong>empreinte carbone</strong> réelle (gCO₂) liée à la consommation électrique du processeur est mesurée par CodeCarbon. <em>Survolez les badges verts pour voir les équivalences.</em>
+      <strong>Transparence & Éco-conception :</strong> Ce RAG fonctionne 100% en local. Le <strong>coût en euros</strong> affiché est une estimation pédagogique simulant une facturation Cloud standard (0,003 € / 1k tokens). L'<strong>empreinte carbone</strong> réelle (gCO₂) liée à la consommation électrique est mesurée par CodeCarbon. <em>Survolez les badges verts pour voir les équivalences.</em>
     </span>
   </div>
 
@@ -822,6 +845,10 @@ header {
         <div class="modal-section-label">Réponse générée</div>
         <div class="modal-a-block" id="modal-a-block"></div>
       </div>
+      <div>
+        <div class="modal-section-label">Documents sources liés</div>
+        <div id="modal-sources-block" class="msg-sources" style="margin-top: 4px;"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <div class="modal-time" id="modal-time"></div>
@@ -839,7 +866,7 @@ let selectedDocIdx = null;
 let filteredDocs = [];
 let currentModalEntry = null;
 let MOCK_DOCS = [];
-let totalCarbonKg = 0; // Ajout de la variable d'accumulation
+let totalCarbonKg = 0; 
 
 // PDF state
 let pdfDoc = null;
@@ -883,11 +910,11 @@ function selectRole(role) {
   if (role === 'prof') {
     document.getElementById('cache-clear-btn').style.display = '';
     document.getElementById('cache-readonly-notice').classList.add('hidden');
-    document.getElementById('upload-zone').style.display = '';   // upload visible pour prof
+    document.getElementById('upload-zone').style.display = '';   
   } else {
     document.getElementById('cache-clear-btn').style.display = 'none';
     document.getElementById('cache-readonly-notice').classList.remove('hidden');
-    document.getElementById('upload-zone').style.display = 'none'; // pas d'upload pour élève
+    document.getElementById('upload-zone').style.display = 'none'; 
     showSuggestBar();
   }
 
@@ -907,6 +934,7 @@ function showTab(tab, btn) {
 
 // ── SUGGEST BAR (élèves) ───────────────────────────────────────
 function showSuggestBar() {
+  if (currentRole === 'prof') return; // Ne pas l'afficher pour le prof
   if (!profCache.length) return;
   const bar = document.getElementById('suggest-bar');
   const pills = document.getElementById('suggest-pills');
@@ -949,18 +977,28 @@ async function sendMessage() {
     const data = await callBackend(query);
     typingEl.remove();
 
-    // Mise à jour du compteur global
     totalCarbonKg += data.co2_kg;
     document.getElementById('carbon-total-label').textContent = formatTotalCarbon(totalCarbonKg);
 
     const costLabel = `~${data.tokens_est} tokens · ${data.cost_eur.toFixed(5)} €`;
+    const msgDiv = appendMsg('assistant', data.response, 'Assistant RAG', data.sources || [], costLabel, data.co2_label, data.co2_analogy);
     
-    // Appel à appendMsg avec l'analogie pour l'effet de survol
-    appendMsg('assistant', data.response, 'Assistant RAG', data.sources || [], costLabel, data.co2_label, data.co2_analogy);
-    
+    // Si c'est un professeur, on ajoute le bouton de sauvegarde manuelle
+    if (currentRole === 'prof') {
+      const btn = document.createElement('button');
+      btn.className = 'save-cache-btn';
+      btn.innerHTML = '💾 Partager aux élèves (Cache)';
+      btn.onclick = () => {
+        saveToProfCache(query, data.response, costLabel, data.co2_label, data.sources || []);
+        btn.innerHTML = '✅ Enregistré dans le cache !';
+        btn.disabled = true;
+      };
+      msgDiv.querySelector('.msg-body').appendChild(btn);
+    }
+
     chatHistory.push({ role: 'user', content: query });
     chatHistory.push({ role: 'assistant', content: data.response });
-    if (currentRole === 'prof') saveToProfCache(query, data.response, costLabel, data.co2_label);
+    
   } catch (err) {
     typingEl.remove();
     appendMsg('assistant', '⚠ Impossible de joindre le backend. Vérifiez qu\'Ollama est lancé.', 'Système', [], null);
@@ -980,7 +1018,6 @@ async function callBackend(query) {
   return res.json();
 }
 
-// Ajout du paramètre carbonAnalogy pour gérer l'infobulle (Hover)
 function appendMsg(role, text, label, sources, cost, carbon, carbonAnalogy) {
   const c = document.getElementById('chat-messages');
   const div = document.createElement('div');
@@ -1022,9 +1059,10 @@ function scrollBottom() {
 }
 
 // ── CACHE ──────────────────────────────────────────────────────
-function saveToProfCache(question, answer, cost, carbon) {
+function saveToProfCache(question, answer, cost, carbon, sources) {
   const entry = {
     question, answer, cost, carbon,
+    sources: sources || [],
     time: new Date().toLocaleString('fr-FR')
   };
   profCache.unshift(entry);
@@ -1039,17 +1077,22 @@ function renderCache() {
   sub.textContent = `${profCache.length} question${profCache.length !== 1 ? 's' : ''} enregistrée${profCache.length !== 1 ? 's' : ''}`;
 
   if (!profCache.length) {
-    grid.innerHTML = `<div class="cache-empty">Aucune question enregistrée.<br>Les questions posées en mode Professeur apparaîtront ici.</div>`;
+    grid.innerHTML = `<div class="cache-empty">Aucune question enregistrée.<br>Les questions partagées en mode Professeur apparaîtront ici.</div>`;
     return;
   }
+  
   grid.innerHTML = profCache.map((e, i) => `
     <div class="cache-entry" onclick="openModal(${i})">
       <div class="cache-entry-top">
         <div class="cache-entry-role">🎓 Professeur</div>
-        <div class="cache-entry-time">${e.time || ''}</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <div class="cache-entry-time">${e.time || ''}</div>
+          ${currentRole === 'prof' ? `<button class="delete-entry-btn" onclick="event.stopPropagation(); deleteCacheEntry(${i})" title="Supprimer du cache">🗑</button>` : ''}
+        </div>
       </div>
       <div class="cache-entry-q">${e.question}</div>
       <div class="cache-entry-a">${e.answer}</div>
+      ${e.sources && e.sources.length ? `<div class="msg-sources" style="margin-top:0;">${e.sources.map(s => `<span class="source-chip">📄 ${s}</span>`).join('')}</div>` : ''}
       <div class="cache-entry-footer">
         <div class="cache-entry-cost">${e.cost || ''}</div>
         <div class="cache-entry-cta">Voir →</div>
@@ -1057,8 +1100,16 @@ function renderCache() {
     </div>`).join('');
 }
 
+function deleteCacheEntry(idx) {
+  if (!confirm('Voulez-vous vraiment supprimer cette question partagée ?')) return;
+  profCache.splice(idx, 1);
+  localStorage.setItem('ecl_prof_cache', JSON.stringify(profCache));
+  renderCache();
+  if (currentRole !== 'prof') showSuggestBar();
+}
+
 function clearCache() {
-  if (!confirm('Vider tout le cache ?')) return;
+  if (!confirm('Vider tout le cache pour l\'ensemble des utilisateurs ?')) return;
   profCache = [];
   localStorage.removeItem('ecl_prof_cache');
   renderCache();
@@ -1073,9 +1124,20 @@ function openModal(idx) {
   document.getElementById('modal-q-block').textContent = e.question;
   document.getElementById('modal-a-block').textContent = e.answer;
   document.getElementById('modal-cost-badge').textContent = e.cost || '';
+  
   const cb = document.getElementById('modal-carbon-badge');
   if (e.carbon) { cb.textContent = '🌿 ' + e.carbon; cb.style.display = ''; }
   else { cb.style.display = 'none'; }
+  
+  const sb = document.getElementById('modal-sources-block');
+  if (e.sources && e.sources.length) {
+    sb.innerHTML = e.sources.map(s => `<span class="source-chip">📄 ${s}</span>`).join('');
+    sb.style.display = 'flex';
+  } else {
+    sb.style.display = 'none';
+    sb.innerHTML = '';
+  }
+
   document.getElementById('modal-time').textContent = e.time || '';
   document.getElementById('modal-overlay').classList.add('open');
 }
