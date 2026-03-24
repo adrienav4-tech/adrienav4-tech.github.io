@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RAG · Centrale Lyon</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -42,55 +43,46 @@ body {
   align-items: center; justify-content: center;
   z-index: 100;
 }
-
 .rs-eyebrow {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--rouge); margin-bottom: 16px;
   opacity: 0; animation: fadeUp 0.5s 0.1s forwards;
 }
-
 .rs-logo-bar {
   display: flex; align-items: center; gap: 14px;
   margin-bottom: 6px;
   opacity: 0; animation: fadeUp 0.5s 0.2s forwards;
 }
-
 .rs-blason {
   width: 52px; height: 52px;
   background: var(--rouge); border-radius: 3px;
   display: flex; align-items: center; justify-content: center;
   font-size: 24px; flex-shrink: 0;
 }
-
 .rs-school-name {
   font-family: 'Libre Baskerville', serif;
   font-size: 36px; font-weight: 700;
   color: var(--noir); letter-spacing: -0.01em; line-height: 1;
 }
 .rs-school-name span { color: var(--rouge); }
-
 .rs-tagline {
   font-size: 12.5px; color: var(--gris-texte); margin-bottom: 40px;
   opacity: 0; animation: fadeUp 0.5s 0.35s forwards;
 }
-
 .rs-divider {
   width: 36px; height: 3px; background: var(--rouge);
   margin: 0 auto 36px;
   opacity: 0; animation: fadeUp 0.5s 0.45s forwards;
 }
-
 .rs-prompt {
   font-size: 13px; color: var(--gris-texte); margin-bottom: 22px;
   opacity: 0; animation: fadeUp 0.5s 0.55s forwards;
 }
-
 .rs-cards {
   display: flex; gap: 18px;
   opacity: 0; animation: fadeUp 0.6s 0.65s forwards;
 }
-
 .rs-card {
   width: 220px; border: 1.5px solid var(--gris);
   border-radius: var(--radius-md); padding: 28px 22px;
@@ -120,16 +112,63 @@ body {
 .rs-card-arrow { font-size: 18px; color: var(--rouge); transition: transform 0.2s; }
 .rs-card:hover .rs-card-arrow { transform: translateX(4px); }
 
+/* ── PASSWORD MODAL ── */
+#pwd-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 300; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+#pwd-overlay.open { opacity: 1; pointer-events: all; }
+.pwd-box {
+  background: var(--blanc); border-radius: var(--radius-md);
+  width: 340px; padding: 28px 24px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+  transform: translateY(10px); transition: transform 0.2s;
+  display: flex; flex-direction: column; gap: 16px;
+}
+#pwd-overlay.open .pwd-box { transform: translateY(0); }
+.pwd-title {
+  font-family: 'Libre Baskerville', serif;
+  font-size: 18px; font-weight: 700; color: var(--noir);
+}
+.pwd-label { font-size: 12px; color: var(--gris-texte); line-height: 1.5; }
+.pwd-input {
+  width: 100%; border: 1.5px solid var(--gris); border-radius: var(--radius);
+  padding: 9px 12px; font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px; color: var(--noir); outline: none;
+  transition: border-color 0.2s; letter-spacing: 0.1em;
+}
+.pwd-input:focus { border-color: var(--rouge); }
+.pwd-error {
+  font-size: 11px; color: var(--rouge);
+  font-family: 'IBM Plex Mono', monospace;
+  display: none;
+}
+.pwd-error.visible { display: block; }
+.pwd-row { display: flex; gap: 8px; justify-content: flex-end; }
+.pwd-cancel {
+  background: transparent; border: 1.5px solid var(--gris);
+  color: var(--gris-texte); padding: 7px 14px; border-radius: var(--radius);
+  font-size: 12px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;
+  transition: border-color 0.15s;
+}
+.pwd-cancel:hover { border-color: var(--rouge); color: var(--rouge); }
+.pwd-submit {
+  background: var(--rouge); color: white; border: none;
+  padding: 7px 18px; border-radius: var(--radius);
+  font-size: 12px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 500; transition: background 0.15s;
+}
+.pwd-submit:hover { background: var(--rouge-fonce); }
+
 /* ── HEADER ── */
 #app { display: flex; flex-direction: column; height: 100vh; }
-
 header {
   height: 50px; border-bottom: 2px solid var(--noir);
   display: flex; align-items: center;
   padding: 0 20px; gap: 0; flex-shrink: 0;
   background: var(--blanc);
 }
-
 .h-blason {
   width: 30px; height: 30px; background: var(--rouge); border-radius: 2px;
   display: flex; align-items: center; justify-content: center;
@@ -140,7 +179,6 @@ header {
   font-size: 14px; font-weight: 700; color: var(--noir); margin-right: 5px;
 }
 .h-sub { font-size: 11px; color: var(--gris-texte); margin-right: auto; }
-
 .h-tabs {
   display: flex; gap: 0; height: 100%; align-items: stretch; margin-right: 16px;
 }
@@ -156,7 +194,6 @@ header {
 }
 .h-tab:hover { color: var(--noir); }
 .h-tab.active { color: var(--rouge); border-bottom-color: var(--rouge); }
-
 .h-status {
   display: flex; align-items: center; gap: 5px;
   font-family: 'IBM Plex Mono', monospace;
@@ -167,7 +204,6 @@ header {
   animation: pulse 2s infinite;
 }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
 .h-role-pill {
   display: flex; align-items: center; gap: 6px;
   padding: 5px 12px; border: 1.5px solid var(--gris);
@@ -196,7 +232,6 @@ header {
 
 /* ── CHAT ── */
 #panel-chat { flex-direction: column; }
-
 .cache-suggest-bar {
   padding: 7px 20px; background: rgba(200,16,46,0.04);
   border-bottom: 1px solid var(--rouge-border);
@@ -216,18 +251,15 @@ header {
   max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cache-suggest-pill:hover { background: var(--rouge-pale); border-color: var(--rouge); }
-
 .chat-messages {
   flex: 1; overflow-y: auto; padding: 24px 24px 16px;
   display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth;
 }
 .chat-messages::-webkit-scrollbar { width: 4px; }
 .chat-messages::-webkit-scrollbar-thumb { background: var(--gris); }
-
 .msg { display: flex; gap: 12px; animation: fadeUp 0.25s ease; }
 .msg.user { flex-direction: row-reverse; align-self: flex-end; max-width: 680px; }
 .msg.assistant { align-self: flex-start; max-width: 740px; }
-
 .msg-avatar {
   width: 30px; height: 30px; border-radius: 4px;
   display: flex; align-items: center; justify-content: center;
@@ -238,11 +270,9 @@ header {
   background: var(--rouge); color: white;
   font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500;
 }
-
 .msg-body { display: flex; flex-direction: column; gap: 3px; }
 .msg-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .msg.user .msg-meta { flex-direction: row-reverse; }
-
 .msg-role {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 9px; letter-spacing: 0.08em; color: var(--gris-texte); text-transform: uppercase;
@@ -252,7 +282,6 @@ header {
   background: var(--rouge-pale); border: 1px solid var(--rouge-border);
   padding: 1px 7px; border-radius: 10px;
 }
-
 .msg-bubble {
   padding: 11px 15px; border-radius: var(--radius-md);
   font-size: 13.5px; line-height: 1.7;
@@ -266,7 +295,6 @@ header {
   background: var(--gris-clair); border: 1px solid var(--gris);
   border-radius: 4px var(--radius-md) var(--radius-md) var(--radius-md);
 }
-
 .msg-sources { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .source-chip {
   font-family: 'IBM Plex Mono', monospace; font-size: 9px;
@@ -275,7 +303,6 @@ header {
   cursor: pointer; transition: background 0.15s; letter-spacing: 0.04em;
 }
 .source-chip:hover { background: rgba(200,16,46,0.15); }
-
 .typing { display: flex; gap: 4px; align-items: center; }
 .typing span {
   width: 5px; height: 5px; border-radius: 50%; background: var(--rouge);
@@ -284,7 +311,6 @@ header {
 .typing span:nth-child(2) { animation-delay: 0.2s; }
 .typing span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
-
 .chat-footer {
   border-top: 1px solid var(--gris); background: var(--blanc); padding: 12px 20px;
 }
@@ -301,7 +327,6 @@ header {
   color: var(--noir); resize: none; max-height: 100px; line-height: 1.5; background: transparent;
 }
 #chat-input::placeholder { color: var(--gris-mid); }
-
 .send-btn {
   width: 36px; height: 36px; border-radius: var(--radius); border: none;
   background: var(--rouge); color: white; font-size: 16px; cursor: pointer;
@@ -310,7 +335,6 @@ header {
 }
 .send-btn:hover { background: var(--rouge-fonce); transform: scale(1.04); }
 .send-btn:disabled { background: var(--gris); cursor: not-allowed; transform: none; }
-
 .chat-hint {
   margin-top: 7px; font-size: 10.5px; color: var(--gris-mid);
   font-family: 'IBM Plex Mono', monospace;
@@ -318,7 +342,6 @@ header {
 
 /* ── DOCS ── */
 #panel-docs { flex-direction: row; }
-
 .doc-sidebar {
   width: 270px; border-right: 1px solid var(--gris);
   display: flex; flex-direction: column; overflow: hidden; background: var(--blanc);
@@ -336,11 +359,9 @@ header {
 }
 .doc-search-input:focus { border-color: var(--rouge); background: var(--blanc); }
 .doc-search-input::placeholder { color: var(--gris-mid); }
-
 .doc-list { flex: 1; overflow-y: auto; }
 .doc-list::-webkit-scrollbar { width: 3px; }
 .doc-list::-webkit-scrollbar-thumb { background: var(--gris); }
-
 .doc-item {
   padding: 11px 16px; border-bottom: 1px solid var(--gris-clair);
   cursor: pointer; display: flex; gap: 10px; align-items: flex-start;
@@ -348,7 +369,6 @@ header {
 }
 .doc-item:hover { background: var(--gris-clair); }
 .doc-item.active { background: var(--rouge-pale); border-left-color: var(--rouge); }
-
 .doc-item-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; color: var(--rouge); }
 .doc-item-info { display: flex; flex-direction: column; gap: 1px; }
 .doc-item-name { font-size: 12px; font-weight: 500; color: var(--noir); line-height: 1.3; }
@@ -356,7 +376,6 @@ header {
   font-family: 'IBM Plex Mono', monospace; font-size: 9px;
   color: var(--gris-texte); letter-spacing: 0.04em;
 }
-
 .doc-upload-zone { padding: 10px; border-top: 1px solid var(--gris); }
 .upload-label {
   display: block; border: 1.5px dashed var(--gris); border-radius: var(--radius);
@@ -365,7 +384,6 @@ header {
 }
 .upload-label:hover { border-color: var(--rouge); color: var(--rouge); }
 #pdf-upload { display: none; }
-
 .pdf-viewer { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .pdf-toolbar {
   height: 42px; border-bottom: 1px solid var(--gris);
@@ -382,8 +400,10 @@ header {
   transition: border-color 0.15s, color 0.15s; font-family: 'IBM Plex Sans', sans-serif;
 }
 .pdf-nav:hover { border-color: var(--rouge); color: var(--rouge); }
+.pdf-nav:disabled { opacity: 0.4; cursor: not-allowed; }
 .pdf-page-info {
   font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--gris-texte);
+  min-width: 60px; text-align: center;
 }
 .pdf-body {
   flex: 1; overflow-y: auto; padding: 24px; background: var(--gris-clair);
@@ -412,13 +432,32 @@ header {
   padding: 26px 30px; font-size: 13px; line-height: 1.85;
   color: var(--noir); white-space: pre-wrap;
 }
-.pdf-embed { width: 100%; height: 100%; border: none; }
+
+/* PDF.js canvas rendering */
+.pdf-canvas-wrap {
+  width: 100%; max-width: 700px; background: var(--blanc);
+  border: 1px solid var(--gris); border-radius: var(--radius-md); overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.pdf-canvas-head {
+  background: var(--rouge); padding: 7px 14px;
+  display: flex; justify-content: space-between;
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.85);
+}
+.pdf-canvas-wrap canvas {
+  display: block; width: 100%; height: auto;
+}
+.pdf-loading {
+  padding: 40px; text-align: center;
+  font-size: 12px; color: var(--gris-texte);
+  font-family: 'IBM Plex Mono', monospace;
+}
 
 /* ── CACHE PANEL ── */
 #panel-cache { flex-direction: column; overflow-y: auto; }
 #panel-cache::-webkit-scrollbar { width: 4px; }
 #panel-cache::-webkit-scrollbar-thumb { background: var(--gris); }
-
 .cache-page-inner { padding: 28px; display: flex; flex-direction: column; gap: 20px; }
 .cache-page-header {
   display: flex; justify-content: space-between; align-items: flex-end;
@@ -428,7 +467,6 @@ header {
   font-family: 'Libre Baskerville', serif; font-size: 24px; font-weight: 700; color: var(--noir);
 }
 .cache-page-sub { font-size: 12px; color: var(--gris-texte); margin-top: 3px; }
-
 .cache-clear-btn {
   background: transparent; border: 1.5px solid var(--rouge);
   color: var(--rouge); padding: 6px 14px; border-radius: var(--radius);
@@ -436,7 +474,6 @@ header {
   transition: background 0.15s;
 }
 .cache-clear-btn:hover { background: var(--rouge-pale); }
-
 .cache-readonly-notice {
   display: flex; align-items: center; gap: 8px;
   background: var(--gris-clair); border: 1px solid var(--gris);
@@ -444,7 +481,6 @@ header {
   font-size: 11.5px; color: var(--gris-texte);
 }
 .cache-readonly-notice.hidden { display: none; }
-
 .cache-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px;
 }
@@ -455,7 +491,6 @@ header {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .cache-entry:hover { border-color: var(--rouge); box-shadow: 0 4px 16px rgba(200,16,46,0.08); }
-
 .cache-entry-top { display: flex; justify-content: space-between; align-items: center; }
 .cache-entry-role {
   font-family: 'IBM Plex Mono', monospace; font-size: 8px;
@@ -477,7 +512,6 @@ header {
   opacity: 0; transition: opacity 0.2s;
 }
 .cache-entry:hover .cache-entry-cta { opacity: 1; }
-
 .cache-empty {
   grid-column: 1/-1; text-align: center; padding: 60px;
   color: var(--gris-texte); font-size: 13px; line-height: 1.7;
@@ -490,7 +524,6 @@ header {
   opacity: 0; pointer-events: none; transition: opacity 0.2s;
 }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
-
 .modal {
   background: var(--blanc); border-radius: var(--radius-md);
   max-width: 700px; width: 100%; max-height: 82vh;
@@ -499,13 +532,12 @@ header {
   transform: translateY(12px); transition: transform 0.2s; overflow: hidden;
 }
 .modal-overlay.open .modal { transform: translateY(0); }
-
 .modal-header {
   padding: 18px 20px 14px; border-bottom: 2px solid var(--noir);
   display: flex; justify-content: space-between; align-items: flex-start;
   gap: 12px; flex-shrink: 0;
 }
-.modal-header-left { flex: 1; }
+.modal-header-left { flex: 1; min-width: 0; }
 .modal-label {
   font-family: 'IBM Plex Mono', monospace; font-size: 9px;
   letter-spacing: 0.12em; color: var(--rouge); text-transform: uppercase; margin-bottom: 4px;
@@ -513,6 +545,8 @@ header {
 .modal-title {
   font-family: 'Libre Baskerville', serif; font-size: 17px; font-weight: 700;
   color: var(--noir); line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 .modal-header-right { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; }
 .modal-close {
@@ -524,24 +558,28 @@ header {
   font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--rouge);
   background: var(--rouge-pale); border: 1px solid var(--rouge-border); padding: 2px 8px; border-radius: 10px;
 }
-
-.modal-body { flex: 1; overflow-y: auto; padding: 20px; }
+.modal-body {
+  flex: 1; overflow-y: auto; padding: 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
 .modal-body::-webkit-scrollbar { width: 4px; }
 .modal-body::-webkit-scrollbar-thumb { background: var(--gris); }
-
 .modal-section-label {
   font-family: 'IBM Plex Mono', monospace; font-size: 9px;
-  letter-spacing: 0.12em; color: var(--rouge); text-transform: uppercase; margin-bottom: 8px;
+  letter-spacing: 0.12em; color: var(--rouge); text-transform: uppercase; margin-bottom: 4px;
 }
 .modal-q-block {
   font-size: 14px; font-weight: 600; color: var(--noir); line-height: 1.5;
-  margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--gris);
+  padding: 14px 16px; background: var(--gris-clair); border-radius: var(--radius);
+  border-left: 3px solid var(--rouge);
   white-space: pre-wrap; word-break: break-word;
 }
 .modal-a-block {
-  font-size: 13.5px; color: var(--noir-soft); line-height: 1.8; white-space: pre-wrap; word-break: break-word;
+  font-size: 13.5px; color: var(--noir-soft); line-height: 1.8;
+  white-space: pre-wrap; word-break: break-word;
+  padding: 14px 16px; background: var(--blanc);
+  border: 1px solid var(--gris); border-radius: var(--radius);
 }
-
 .modal-footer {
   padding: 12px 20px; border-top: 1px solid var(--gris);
   display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
@@ -570,7 +608,7 @@ header {
     <div class="rs-blason">🦁</div>
     <div class="rs-school-name">Centrale <span>Lyon</span></div>
   </div>
-  <div class="rs-tagline">Système collaborative de recherches approfondies et d'apprentissage</div>
+  <div class="rs-tagline">Système collaboratif de recherches approfondies et d'apprentissage</div>
   <div class="rs-divider"></div>
   <p class="rs-prompt">Identifiez-vous pour accéder à l'assistant</p>
   <div class="rs-cards">
@@ -580,12 +618,31 @@ header {
       <div class="rs-card-desc">Interrogez la base de données, consultez les cours et les requêtes/suggestions du corps enseignant.</div>
       <div class="rs-card-arrow">→</div>
     </div>
-    <div class="rs-card" onclick="selectRole('prof')">
+    <div class="rs-card" onclick="askProfPassword()">
       <div class="rs-card-icon">🎓</div>
       <div class="rs-card-title">Professeur</div>
       <div class="rs-card-desc">Vos requêtes sont enregistrées dans le cache partagé, visibles par tous les élèves.</div>
       <div class="rs-card-badge">ADMIN</div>
       <div class="rs-card-arrow">→</div>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD OVERLAY -->
+<div id="pwd-overlay">
+  <div class="pwd-box">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:32px;height:32px;background:var(--rouge);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;">🔒</div>
+      <div class="pwd-title">Accès Professeur</div>
+    </div>
+    <div class="pwd-label">Saisissez le mot de passe administrateur pour accéder au mode professeur.</div>
+    <input type="password" class="pwd-input" id="pwd-input"
+      placeholder="Mot de passe"
+      onkeydown="if(event.key==='Enter')checkPwd(); if(event.key==='Escape')closePwd();">
+    <div class="pwd-error" id="pwd-error">⚠ Mot de passe incorrect. Réessayez.</div>
+    <div class="pwd-row">
+      <button class="pwd-cancel" onclick="closePwd()">Annuler</button>
+      <button class="pwd-submit" onclick="checkPwd()">Connexion →</button>
     </div>
   </div>
 </div>
@@ -614,7 +671,7 @@ header {
   <div class="disclaimer-bar">
     <span class="disclaimer-icon">ℹ️</span>
     <span class="disclaimer-text">
-      <strong>Avis d'utilisation :</strong> Les réponses sont générées par un modèle local (Ollama / qwen2.5:1.5b) et peuvent contenir des erreurs. Elles ne remplacent pas les cours officiels ni l'expertise des enseignants. Le <strong>coût estimatif</strong> affiché après chaque réponse est calculé sur la base du nombre de tokens traités (≈ 0,003 € / 1 000 tokens, hors coût énergétique réel mesuré par CodeCarbon).
+      <strong>Avis d'utilisation :</strong> Les réponses sont générées par un modèle local (Ollama / qwen2.5:1.5b) et peuvent contenir des erreurs. Elles ne remplacent pas les cours officiels ni l'expertise des enseignants. Le <strong>coût estimatif</strong> affiché est calculé sur la base du nombre de tokens traités (≈ 0,003 € / 1 000 tokens).
     </span>
   </div>
 
@@ -659,7 +716,7 @@ header {
         <div class="doc-upload-zone">
           <label class="upload-label" for="pdf-upload">
             ＋ Charger un PDF local<br>
-            <span style="font-size:10px;color:var(--gris-mid)">Prévisualisation uniquement</span>
+            <span style="font-size:10px;color:var(--gris-mid)">Toutes les pages lisibles</span>
           </label>
           <input type="file" id="pdf-upload" accept=".pdf" onchange="loadLocalPDF(this)">
         </div>
@@ -667,9 +724,9 @@ header {
       <div class="pdf-viewer">
         <div class="pdf-toolbar">
           <div class="pdf-toolbar-title" id="pdf-title">Aucun document sélectionné</div>
-          <button class="pdf-nav" onclick="changePage(-1)">◀ Préc.</button>
+          <button class="pdf-nav" id="btn-prev" onclick="changePage(-1)" disabled>◀ Préc.</button>
           <div class="pdf-page-info" id="page-info">— / —</div>
-          <button class="pdf-nav" onclick="changePage(1)">Suiv. ▶</button>
+          <button class="pdf-nav" id="btn-next" onclick="changePage(1)" disabled>Suiv. ▶</button>
         </div>
         <div class="pdf-body" id="pdf-body">
           <div class="pdf-placeholder">
@@ -691,7 +748,7 @@ header {
           <button class="cache-clear-btn" id="cache-clear-btn" onclick="clearCache()">🗑 Vider le cache</button>
         </div>
         <div class="cache-readonly-notice hidden" id="cache-readonly-notice">
-          👁 Mode lecture seule — consultez les questions posées par les professeurs. Cliquez sur une entrée pour voir la réponse complète et éventuellement réutiliser la question.
+          👁 Mode lecture seule — consultez les questions posées par les professeurs. Cliquez sur une entrée pour voir la réponse complète et réutiliser la question.
         </div>
         <div class="cache-grid" id="cache-grid"></div>
       </div>
@@ -700,7 +757,7 @@ header {
   </div>
 </div>
 
-<!-- MODAL -->
+<!-- CACHE MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalOverlay(event)">
   <div class="modal">
     <div class="modal-header">
@@ -714,10 +771,14 @@ header {
       </div>
     </div>
     <div class="modal-body">
-      <div class="modal-section-label">Question complète</div>
-      <div class="modal-q-block" id="modal-q-block"></div>
-      <div class="modal-section-label">Réponse générée</div>
-      <div class="modal-a-block" id="modal-a-block"></div>
+      <div>
+        <div class="modal-section-label">Question complète</div>
+        <div class="modal-q-block" id="modal-q-block"></div>
+      </div>
+      <div>
+        <div class="modal-section-label">Réponse générée</div>
+        <div class="modal-a-block" id="modal-a-block"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <div class="modal-time" id="modal-time"></div>
@@ -727,30 +788,63 @@ header {
 </div>
 
 <script>
-// ── STATE ─────────────────────────────────────────────────────
+// ── STATE ──────────────────────────────────────────────────────
 let currentRole = null;
 let chatHistory = [];
 let profCache = JSON.parse(localStorage.getItem('ecl_prof_cache') || '[]');
 let selectedDocIdx = null;
 let currentPage = 0;
-let pdfPages = [];
+let pdfPages = []; // mock text pages
 let filteredDocs = [];
 let currentModalEntry = null;
 
-const COST_PER_TOKEN = 0.000003; // ~€ par token pour modèle local
+// PDF.js state
+let pdfDoc = null;         // loaded PDF.js document
+let pdfMode = 'mock';      // 'mock' | 'pdfjs'
+let totalPdfPages = 0;
+
+const COST_PER_TOKEN = 0.000003;
+const PROF_PASSWORD = 'ECL2024';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const MOCK_DOCS = [
-  { name: "Régression Linéaire", pages: 24, subject: "ML" },
-  { name: "Algèbre Linéaire", pages: 38, subject: "Maths" },
-  { name: "Thermodynamique", pages: 51, subject: "Physique" },
-  { name: "Traitement du Signal", pages: 30, subject: "Signal" },
-  { name: "Automatique", pages: 42, subject: "Automatique" },
-  { name: "Analyse Numérique", pages: 29, subject: "Maths" },
-  { name: "Probabilités", pages: 35, subject: "Maths" },
-  { name: "Deep Learning", pages: 60, subject: "ML" },
+  { name: "Régression Linéaire",   pages: 24, subject: "ML" },
+  { name: "Algèbre Linéaire",      pages: 38, subject: "Maths" },
+  { name: "Thermodynamique",       pages: 51, subject: "Physique" },
+  { name: "Traitement du Signal",  pages: 30, subject: "Signal" },
+  { name: "Automatique",           pages: 42, subject: "Automatique" },
+  { name: "Analyse Numérique",     pages: 29, subject: "Maths" },
+  { name: "Probabilités",          pages: 35, subject: "Maths" },
+  { name: "Deep Learning",         pages: 60, subject: "ML" },
 ];
 
-// ── ROLE ─────────────────────────────────────────────────────
+// ── PASSWORD ───────────────────────────────────────────────────
+function askProfPassword() {
+  const overlay = document.getElementById('pwd-overlay');
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('pwd-error').classList.remove('visible');
+  overlay.classList.add('open');
+  setTimeout(() => document.getElementById('pwd-input').focus(), 120);
+}
+
+function closePwd() {
+  document.getElementById('pwd-overlay').classList.remove('open');
+}
+
+function checkPwd() {
+  const val = document.getElementById('pwd-input').value;
+  if (val === PROF_PASSWORD) {
+    closePwd();
+    selectRole('prof');
+  } else {
+    document.getElementById('pwd-error').classList.add('visible');
+    document.getElementById('pwd-input').value = '';
+    document.getElementById('pwd-input').focus();
+  }
+}
+
+// ── ROLE ───────────────────────────────────────────────────────
 function selectRole(role) {
   currentRole = role;
   document.getElementById('role-screen').style.display = 'none';
@@ -794,14 +888,15 @@ function resetRole() {
         <div class="msg-bubble" id="welcome-bubble">Bonjour.</div>
       </div>
     </div>`;
-  // Reset tab
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.h-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-chat').classList.add('active');
   document.querySelector('[data-tab="chat"]').classList.add('active');
+  pdfDoc = null;
+  pdfMode = 'mock';
 }
 
-// ── TABS ─────────────────────────────────────────────────────
+// ── TABS ───────────────────────────────────────────────────────
 function showTab(tab, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.h-tab').forEach(b => b.classList.remove('active'));
@@ -814,11 +909,10 @@ function switchToChat() {
   setTimeout(() => document.getElementById('chat-input').focus(), 50);
 }
 
-// ── CHAT ─────────────────────────────────────────────────────
+// ── CHAT ───────────────────────────────────────────────────────
 function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
-
 function autoResize(ta) {
   ta.style.height = 'auto';
   ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
@@ -828,7 +922,6 @@ async function sendMessage() {
   const input = document.getElementById('chat-input');
   const query = input.value.trim();
   if (!query) return;
-
   input.value = '';
   input.style.height = 'auto';
   document.getElementById('send-btn').disabled = true;
@@ -839,19 +932,14 @@ async function sendMessage() {
   try {
     const response = await callOllama(query);
     typingEl.remove();
-
     const tokenEst = Math.round((query.length + response.length) / 4);
     const costEst = (tokenEst * COST_PER_TOKEN).toFixed(5);
     const costLabel = `~${tokenEst} tokens · ${costEst} €`;
-
     const sources = extractSources(response);
     appendMsg('assistant', response, 'Assistant RAG', sources, costLabel);
-
     chatHistory.push({ role: 'user', content: query });
     chatHistory.push({ role: 'assistant', content: response });
-
     if (currentRole === 'prof') saveToProfCache(query, response, costLabel);
-
   } catch (err) {
     typingEl.remove();
     appendMsg('assistant',
@@ -871,7 +959,7 @@ async function callOllama(query) {
   const prompt = `Tu es un assistant pédagogique pour les étudiants de l'École Centrale de Lyon. Réponds en français, clairement et de manière structurée. Si pertinent, indique les sources sous la forme [SOURCE: nom_du_cours].
 
 ${history}
-Question: query: ${query}
+Question: ${query}
 Réponse:`;
 
   const res = await fetch('http://localhost:11434/api/generate', {
@@ -879,7 +967,6 @@ Réponse:`;
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: 'qwen2.5:1.5b', prompt, stream: false })
   });
-
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   return data.response || '(Aucune réponse)';
@@ -934,9 +1021,9 @@ function scrollBottom() {
 
 function esc(s) {
   return String(s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
 }
-function escAttr(s) { return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+function escAttr(s) { return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
 function truncate(s, n) { return s.length > n ? s.slice(0, n) + '…' : s; }
 function formatTime(iso) {
   const d = new Date(iso);
@@ -944,7 +1031,7 @@ function formatTime(iso) {
          d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
-// ── PROF CACHE ────────────────────────────────────────────────
+// ── PROF CACHE ─────────────────────────────────────────────────
 function saveToProfCache(question, answer, cost) {
   profCache.unshift({ question, answer, cost, timestamp: new Date().toISOString(), role: 'Professeur' });
   if (profCache.length > 50) profCache = profCache.slice(0, 50);
@@ -972,7 +1059,7 @@ function renderCache() {
   grid.innerHTML = profCache.map((e, i) => `
     <div class="cache-entry" onclick="openModal(${i})">
       <div class="cache-entry-top">
-        <div class="cache-entry-role">👤 ${esc(e.role)}</div>
+        <div class="cache-entry-role">👤 ${esc(e.role || 'Professeur')}</div>
         <div class="cache-entry-time">${formatTime(e.timestamp)}</div>
       </div>
       <div class="cache-entry-q">${esc(e.question)}</div>
@@ -993,10 +1080,13 @@ function clearCache() {
   document.getElementById('suggest-bar').classList.remove('visible');
 }
 
-// ── MODAL ─────────────────────────────────────────────────────
+// ── MODAL (cache) ──────────────────────────────────────────────
 function openModal(idx) {
   const e = profCache[idx];
+  if (!e) return;
   currentModalEntry = e;
+
+  // Use textContent to safely set text (no XSS, no encoding issues)
   document.getElementById('modal-title').textContent = truncate(e.question, 80);
   document.getElementById('modal-q-block').textContent = e.question;
   document.getElementById('modal-a-block').textContent = e.answer;
@@ -1023,9 +1113,10 @@ function injectQuery(q) {
   const inp = document.getElementById('chat-input');
   inp.value = q;
   autoResize(inp);
+  inp.focus();
 }
 
-// ── DOCS ─────────────────────────────────────────────────────
+// ── DOCS ───────────────────────────────────────────────────────
 function renderDocs(filter) {
   filteredDocs = filter
     ? MOCK_DOCS.filter(d =>
@@ -1047,78 +1138,153 @@ function filterDocs(val) { renderDocs(val); }
 
 function selectDoc(idx) {
   selectedDocIdx = idx;
+  pdfDoc = null;
+  pdfMode = 'mock';
   renderDocs(document.querySelector('.doc-search-input').value);
   const doc = filteredDocs[idx];
   document.getElementById('pdf-title').textContent = doc.name;
   pdfPages = getSampleContent(doc.name);
+  totalPdfPages = pdfPages.length;
   currentPage = 0;
-  renderPage(doc);
+  updateNavButtons();
+  renderMockPage(doc);
 }
 
-function renderPage(doc) {
+function renderMockPage(doc) {
   const d = doc || filteredDocs[selectedDocIdx];
-  document.getElementById('page-info').textContent = `${currentPage + 1} / ${pdfPages.length}`;
+  if (!d) return;
+  document.getElementById('page-info').textContent = `${currentPage + 1} / ${totalPdfPages}`;
   document.getElementById('pdf-body').innerHTML = `
     <div class="pdf-page-card">
       <div class="pdf-page-head">
         <span>${d.name.toUpperCase()}</span>
-        <span>PAGE ${currentPage + 1} / ${pdfPages.length}</span>
+        <span>PAGE ${currentPage + 1} / ${totalPdfPages}</span>
       </div>
       <div class="pdf-page-text">${pdfPages[currentPage]}</div>
     </div>`;
 }
 
+async function renderPdfjsPage() {
+  if (!pdfDoc) return;
+  document.getElementById('page-info').textContent = `${currentPage + 1} / ${totalPdfPages}`;
+  document.getElementById('pdf-body').innerHTML = '<div class="pdf-loading">⏳ Chargement de la page…</div>';
+
+  try {
+    const page = await pdfDoc.getPage(currentPage + 1);
+    const viewport = page.getViewport({ scale: 1.6 });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'pdf-canvas-wrap';
+    wrap.innerHTML = `<div class="pdf-canvas-head"><span>${document.getElementById('pdf-title').textContent.toUpperCase()}</span><span>PAGE ${currentPage + 1} / ${totalPdfPages}</span></div>`;
+    wrap.appendChild(canvas);
+
+    document.getElementById('pdf-body').innerHTML = '';
+    document.getElementById('pdf-body').appendChild(wrap);
+  } catch (err) {
+    document.getElementById('pdf-body').innerHTML = `<div class="pdf-loading">❌ Erreur : ${err.message}</div>`;
+  }
+}
+
 function changePage(dir) {
-  if (!pdfPages.length) return;
-  currentPage = Math.max(0, Math.min(pdfPages.length - 1, currentPage + dir));
-  renderPage();
+  if (totalPdfPages === 0) return;
+  const next = currentPage + dir;
+  if (next < 0 || next >= totalPdfPages) return;
+  currentPage = next;
+  updateNavButtons();
+  if (pdfMode === 'pdfjs') {
+    renderPdfjsPage();
+  } else {
+    renderMockPage();
+  }
+}
+
+function updateNavButtons() {
+  document.getElementById('btn-prev').disabled = (currentPage === 0);
+  document.getElementById('btn-next').disabled = (currentPage >= totalPdfPages - 1);
 }
 
 function openDoc(name) {
   showTab('docs', null);
   filteredDocs = [...MOCK_DOCS];
   const idx = MOCK_DOCS.findIndex(d => d.name.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
-  if (idx >= 0) { selectedDocIdx = idx; renderDocs(); renderPage(MOCK_DOCS[idx]); }
+  if (idx >= 0) { selectedDocIdx = idx; renderDocs(); renderMockPage(MOCK_DOCS[idx]); }
 }
 
-function loadLocalPDF(input) {
+// ── LOAD LOCAL PDF (PDF.js) ────────────────────────────────────
+async function loadLocalPDF(input) {
   const file = input.files[0];
   if (!file) return;
-  const url = URL.createObjectURL(file);
-  document.getElementById('pdf-title').textContent = file.name;
-  document.getElementById('page-info').textContent = '— / —';
-  pdfPages = [];
-  document.getElementById('pdf-body').innerHTML =
-    `<iframe src="${url}" class="pdf-embed" title="${file.name}"></iframe>`;
+
+  const fileName = file.name;
+  document.getElementById('pdf-title').textContent = fileName;
+  document.getElementById('page-info').textContent = '…';
+  document.getElementById('pdf-body').innerHTML = '<div class="pdf-loading">📖 Chargement du PDF…</div>';
+  document.getElementById('btn-prev').disabled = true;
+  document.getElementById('btn-next').disabled = true;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    pdfMode = 'pdfjs';
+    totalPdfPages = pdfDoc.numPages;
+    currentPage = 0;
+
+    // Add to sidebar list (local)
+    const localEntry = { name: fileName.replace('.pdf',''), pages: totalPdfPages, subject: 'Local' };
+    MOCK_DOCS.unshift(localEntry);
+    filteredDocs = [...MOCK_DOCS];
+    selectedDocIdx = 0;
+    renderDocs();
+    updateNavButtons();
+    renderPdfjsPage();
+  } catch (err) {
+    document.getElementById('pdf-body').innerHTML = `<div class="pdf-loading">❌ Impossible de lire ce PDF : ${err.message}</div>`;
+    pdfDoc = null;
+  }
+  // reset input so same file can be re-loaded
+  input.value = '';
 }
 
-// ── SAMPLE CONTENT ────────────────────────────────────────────
+// ── SAMPLE CONTENT ─────────────────────────────────────────────
 function getSampleContent(name) {
   const db = {
     "Régression Linéaire": [
-      `1. Introduction à la Régression Linéaire\n\nLa régression linéaire modélise la relation entre une variable dépendante Y et des variables indépendantes X.\n\nModèle :\nY = β₀ + β₁X₁ + ... + βₙXₙ + ε\n\nOù ε est le terme d'erreur (bruit gaussien centré).`,
-      `2. Estimation par Moindres Carrés Ordinaires\n\nObjectif : minimiser SSR = Σ(yᵢ - ŷᵢ)²\n\nSolution analytique :\nβ̂ = (XᵀX)⁻¹ Xᵀy\n\nUnique si rang(X) = p (absence de multicolinéarité parfaite).`,
-      `3. Évaluation — Coefficient R²\n\nR² = 1 - SSR/SST, avec SST = Σ(yᵢ - ȳ)²\n\nR² ∈ [0, 1]. Plus R² → 1, meilleur est l'ajustement.\n\nR² ajusté pénalise l'ajout de régresseurs non significatifs.`,
+      `1. Introduction\n\nLa régression linéaire modélise la relation entre une variable dépendante Y et des variables indépendantes X.\n\nModèle :\nY = β₀ + β₁X₁ + ... + βₙXₙ + ε\n\nOù ε est le terme d'erreur (bruit gaussien centré).`,
+      `2. Estimation par Moindres Carrés\n\nObjectif : minimiser SSR = Σ(yᵢ - ŷᵢ)²\n\nSolution analytique :\nβ̂ = (XᵀX)⁻¹ Xᵀy\n\nUnique si rang(X) = p (absence de multicolinéarité parfaite).`,
+      `3. Coefficient R²\n\nR² = 1 - SSR/SST, avec SST = Σ(yᵢ - ȳ)²\n\nR² ∈ [0, 1]. Plus R² → 1, meilleur est l'ajustement.\n\nR² ajusté pénalise l'ajout de régresseurs non significatifs.`,
     ],
     "Algèbre Linéaire": [
       `1. Espaces Vectoriels\n\nUn espace vectoriel E sur ℝ vérifie 8 axiomes fondamentaux.\n\nExemples : ℝⁿ, polynômes de degré ≤ n, matrices m×n.`,
       `2. Applications Linéaires\n\nf : E → F est linéaire ssi :\n  f(u+v) = f(u) + f(v)\n  f(λu) = λf(u)\n\nThéorème du rang : dim(E) = dim(Ker f) + dim(Im f)`,
+      `3. Valeurs Propres\n\nλ valeur propre ⟺ det(A - λI) = 0\n\nPolynôme caractéristique de degré n.\nDiagonalisation : A = PDP⁻¹ si n vecteurs propres indépendants.`,
     ],
     "Deep Learning": [
       `1. Réseaux de Neurones\n\nChaque couche : z = Wx + b, puis a = σ(z)\n\nFonctions d'activation : ReLU, Sigmoid, Tanh, Softmax.`,
       `2. Rétropropagation\n\nGradients par règle des chaînes :\n∂L/∂W = ∂L/∂a · ∂a/∂z · ∂z/∂W\n\nAutograd calcule ces gradients automatiquement.`,
+      `3. Optimisation\n\nSGD : θ ← θ - η·∇L\n\nAdam : adapte le taux d'apprentissage par paramètre.\nSchedulers : réduction du lr sur plateau, cosine annealing.`,
     ],
   };
   const key = Object.keys(db).find(k => name.includes(k.split(' ')[0]));
   if (key) return db[key];
-  return [
-    `Introduction — ${name}\n\nFondements du cours.\n\nPlan :\n1. Motivations\n2. Définitions\n3. Méthodes et théorèmes\n4. Applications\n5. Exercices`,
-    `Notations et Définitions\n\nVocabulaire et conventions du cours.\nChaque définition est accompagnée d'exemples concrets.`,
-    `Exercices résolus\n\nEx. 1 — Application directe\nEx. 2 — Démonstration\nEx. 3 — Problème ouvert`,
-  ];
+  // Generate generic pages matching the mock page count
+  const doc = MOCK_DOCS.find(d => d.name === name);
+  const n = doc ? Math.min(doc.pages, 5) : 3;
+  return Array.from({ length: n }, (_, i) => (
+    i === 0
+      ? `Introduction — ${name}\n\nFondements du cours.\n\nPlan :\n1. Motivations\n2. Définitions\n3. Méthodes et théorèmes\n4. Applications pratiques\n5. Exercices résolus`
+      : i === n - 1
+      ? `Exercices résolus — ${name}\n\nEx. 1 — Application directe\nEx. 2 — Démonstration\nEx. 3 — Problème ouvert`
+      : `Chapitre ${i + 1} — ${name}\n\nDéveloppement théorique.\nThéorèmes, preuves et exemples illustratifs.`
+  ));
 }
 
-// ── OLLAMA STATUS ─────────────────────────────────────────────
+// ── OLLAMA STATUS ──────────────────────────────────────────────
 async function checkOllamaStatus() {
   const dot = document.getElementById('ollama-dot');
   const lbl = document.getElementById('ollama-label');
