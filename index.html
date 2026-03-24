@@ -934,7 +934,7 @@ function renderDocs(filter) {
     : [...MOCK_DOCS];
 
   list.innerHTML = filteredDocs.map((d, i) => `
-    <div class="doc-item ${selectedDocIdx === i ? 'active' : ''}" onclick="selectDoc(${i})">
+    <div class="doc-item ${selectedDocIdx === i ? 'active' : ''}" onclick="(${i})">
       <div class="doc-item-icon">📄</div>
       <div class="doc-item-info"><div class="doc-item-name">${d.name}</div></div>
     </div>`).join('');
@@ -942,24 +942,78 @@ function renderDocs(filter) {
 
 function filterDocs(v) { renderDocs(v); }
 
-function selectDoc(idx) {
+async function selectDoc(idx) {
   selectedDocIdx = idx;
-  const doc = filteredDocs[idx];   // ← maintenant cohérent avec l'affichage
+  const doc = filteredDocs[idx];
   document.getElementById('pdf-title').textContent = doc.name;
+  document.getElementById('btn-prev').disabled = false;
+  document.getElementById('btn-next').disabled = false;
+
   const pdfBody = document.getElementById('pdf-body');
-  pdfBody.innerHTML = `
-    <div style="width:100%; height:100%; display:flex; flex-direction:column;">
-      <iframe src="${doc.url}" style="width:100%; height:80vh; border:none;"></iframe>
-      <div style="padding:15px; text-align:center;">
-        <a href="https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true" target="_blank" style="color:var(--rouge); font-size:12px; margin-right:15px;">
-          👁️ Forcer l'aperçu (Google Viewer)
-        </a>
-        <a href="${doc.url}" target="_blank" style="color:var(--noir); font-size:12px; font-weight:bold;">
-          📥 Télécharger le PDF
-        </a>
+  pdfBody.innerHTML = `<div class="pdf-loading">Chargement du PDF…</div>`;
+
+  try {
+    // Récupère le PDF via fetch pour contourner les restrictions iframe
+    const response = await fetch(doc.url);
+    const arrayBuffer = await response.arrayBuffer();
+
+    pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    totalPdfPages = pdfDoc.numPages;
+    currentPage = 1;
+
+    pdfBody.innerHTML = '';
+    await renderPdfPage(currentPage);
+    updatePageInfo();
+  } catch (e) {
+    console.error(e);
+    pdfBody.innerHTML = `<div class="pdf-placeholder">
+      <div class="pdf-placeholder-icon">⚠️</div>
+      <div class="pdf-placeholder-text">Impossible de charger le PDF.<br>
+        <a href="${doc.url}" target="_blank" style="color:var(--rouge)">Télécharger à la place</a>
       </div>
     </div>`;
+  }
+
   renderDocs(document.querySelector('.doc-search-input').value);
+}
+
+async function renderPdfPage(pageNum) {
+  const pdfBody = document.getElementById('pdf-body');
+  const page = await pdfDoc.getPage(pageNum);
+
+  const viewport = page.getViewport({ scale: 1.5 });
+
+  const wrap = document.createElement('div');
+  wrap.className = 'pdf-canvas-wrap';
+
+  const head = document.createElement('div');
+  head.className = 'pdf-canvas-head';
+  head.innerHTML = `<span>${document.getElementById('pdf-title').textContent}</span><span>Page ${pageNum} / ${totalPdfPages}</span>`;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  wrap.appendChild(head);
+  wrap.appendChild(canvas);
+  pdfBody.innerHTML = '';
+  pdfBody.appendChild(wrap);
+
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+}
+
+function updatePageInfo() {
+  document.getElementById('page-info').textContent = `${currentPage} / ${totalPdfPages}`;
+  document.getElementById('btn-prev').disabled = currentPage <= 1;
+  document.getElementById('btn-next').disabled = currentPage >= totalPdfPages;
+}
+
+async function changePage(delta) {
+  const newPage = currentPage + delta;
+  if (newPage < 1 || newPage > totalPdfPages) return;
+  currentPage = newPage;
+  await renderPdfPage(currentPage);
+  updatePageInfo();
 }
 // ── CACHE & STATUS ─────────────────────────────────────────────
 function renderCache() {
