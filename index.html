@@ -282,6 +282,12 @@ header {
   background: var(--rouge-pale); border: 1px solid var(--rouge-border);
   padding: 1px 7px; border-radius: 10px;
 }
+.msg-carbon {
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #2E7D32;
+  background: rgba(46,125,50,0.07); border: 1px solid rgba(46,125,50,0.25);
+  padding: 1px 7px; border-radius: 10px;
+  display: flex; align-items: center; gap: 3px;
+}
 .msg-bubble {
   padding: 11px 15px; border-radius: var(--radius-md);
   font-size: 13.5px; line-height: 1.7;
@@ -662,6 +668,10 @@ header {
       <div class="h-status-dot" id="ollama-dot"></div>
       <span id="ollama-label">ollama · qwen2.5:1.5b</span>
     </div>
+    <div class="h-status" id="carbon-counter" style="margin-right:14px;color:#2E7D32;border:1px solid rgba(46,125,50,0.25);background:rgba(46,125,50,0.06);border-radius:12px;padding:3px 10px;gap:5px;">
+      <span style="font-size:11px;">🌿</span>
+      <span id="carbon-total-label" style="color:#2E7D32;">0.000 mgCO₂</span>
+    </div>
     <div class="h-role-pill" id="role-pill" onclick="resetRole()">
       <div class="h-role-dot"></div>
       <span id="role-pill-text">—</span>
@@ -671,7 +681,7 @@ header {
   <div class="disclaimer-bar">
     <span class="disclaimer-icon">ℹ️</span>
     <span class="disclaimer-text">
-      <strong>Avis d'utilisation :</strong> Les réponses sont générées par un modèle local (Ollama / qwen2.5:1.5b) et peuvent contenir des erreurs. Elles ne remplacent pas les cours officiels ni l'expertise des enseignants. Le <strong>coût estimatif</strong> affiché est calculé sur la base du nombre de tokens traités (≈ 0,003 € / 1 000 tokens).
+      <strong>Avis d'utilisation :</strong> Les réponses sont générées par un modèle local (Ollama / qwen2.5:1.5b) et peuvent contenir des erreurs. Le <strong>coût estimatif</strong> (≈ 0,003 €/1 000 tokens) et l'<strong>empreinte carbone</strong> sont calculés selon la méthodologie <strong>CodeCarbon</strong> — puissance CPU ≈ 15 W, PUE 1,2, intensité France <strong>21,7 gCO₂eq/kWh</strong> (RTE 2024). Survolez le badge 🌿 pour l'équivalence pédagogique.
     </span>
   </div>
 
@@ -768,6 +778,7 @@ header {
       <div class="modal-header-right">
         <button class="modal-close" onclick="closeModalDirect()">✕</button>
         <div class="modal-cost-badge" id="modal-cost-badge"></div>
+        <div id="modal-carbon-badge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#2E7D32;background:rgba(46,125,50,0.07);border:1px solid rgba(46,125,50,0.25);padding:2px 8px;border-radius:10px;display:none;"></div>
       </div>
     </div>
     <div class="modal-body">
@@ -804,7 +815,73 @@ let pdfMode = 'mock';      // 'mock' | 'pdfjs'
 let totalPdfPages = 0;
 
 const COST_PER_TOKEN = 0.000003;
-const PROF_PASSWORD = 'admin';
+const PROF_PASSWORD = 'ECL2024';
+
+// ── CODECARBON — Méthodologie ──────────────────────────────────
+// Basé sur la méthodologie CodeCarbon (mlco2/codecarbon v2.4.1)
+// Modèle : qwen2.5:1.5b tournant sur CPU local
+// Référence : "Small Prompts, Big Energy" (2024), mesures Ollama/CodeCarbon
+//
+// Paramètres :
+//   CPU_POWER_W    : Puissance CPU estimée pour qwen2.5:1.5b en inférence (~15W)
+//                    (source: benchmarks SBC Ollama, modèles 1-2B ≈ 10-20W)
+//   PUE            : Power Usage Effectiveness laptop/desktop ≈ 1.2
+//   TOKENS_PER_SEC : Débit typique qwen2.5:1.5b sur CPU moderne ≈ 20 tok/s
+//   CARBON_FR      : Intensité carbone électricité France 2024 = 21.7 gCO₂eq/kWh
+//                    (source: RTE Bilan électrique 2024)
+//
+// Formule CodeCarbon :
+//   energy_kWh = (tokens / tokens_per_sec) * (CPU_W * PUE) / 3_600_000
+//   co2_g      = energy_kWh * carbon_intensity_gCO2_per_kWh
+
+const CC = {
+  CPU_POWER_W:    15,      // W — consommation CPU pour qwen2.5:1.5b
+  PUE:            1.2,     // Power Usage Effectiveness (laptop/bureau)
+  TOKENS_PER_SEC: 20,      // tokens/s — débit typique qwen2.5:1.5b sur CPU
+  CARBON_FRANCE:  21.7,    // gCO₂eq/kWh — intensité France (RTE 2024)
+};
+
+let sessionCarbonMg = 0;  // cumul session en milligrammes CO₂
+
+function calcCarbon(tokens) {
+  // durée estimée en secondes
+  const durationSec = tokens / CC.TOKENS_PER_SEC;
+  // énergie en kWh
+  const energyKWh = (durationSec * CC.CPU_POWER_W * CC.PUE) / 3_600_000;
+  // CO₂ en grammes
+  const co2g = energyKWh * CC.CARBON_FRANCE;
+  return co2g;
+}
+
+function formatCarbon(co2g) {
+  if (co2g < 0.001) return `${(co2g * 1_000_000).toFixed(2)} µgCO₂`;
+  if (co2g < 1)     return `${(co2g * 1000).toFixed(3)} mgCO₂`;
+  if (co2g < 1000)  return `${co2g.toFixed(4)} gCO₂`;
+  return `${(co2g / 1000).toFixed(6)} kgCO₂`;
+}
+
+function co2Analogy(co2g) {
+  // Analogies pédagogiques pour mettre en perspective
+  const charge_smartphone_g = 8.22; // gCO₂ pour charger un smartphone (source: RTE/ADEME)
+  const km_voiture_g = 120;         // gCO₂/km voiture thermique moyenne
+  const email_g = 4;                // gCO₂ par email envoyé (source: ADEME)
+  const ratio = co2g / charge_smartphone_g;
+  if (co2g < 0.01)   return `≈ ${(co2g / (km_voiture_g/1000)).toFixed(4)} mm en voiture`;
+  if (ratio < 0.001) return `≈ ${(ratio * 1000).toFixed(2)}‰ charge smartphone`;
+  if (ratio < 0.01)  return `≈ ${(ratio * 100).toFixed(3)}% charge smartphone`;
+  return `≈ ${(co2g / email_g * 100).toFixed(3)}% d'un e-mail`;
+}
+
+function updateCarbonCounter() {
+  const el = document.getElementById('carbon-total-label');
+  if (!el) return;
+  const mg = sessionCarbonMg;
+  let label;
+  if (mg < 1)      label = `${mg.toFixed(4)} mgCO₂`;
+  else if (mg < 1000) label = `${mg.toFixed(2)} mgCO₂`;
+  else             label = `${(mg/1000).toFixed(4)} gCO₂`;
+  el.textContent = label + ' session';
+}
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -935,16 +1012,24 @@ async function sendMessage() {
     const tokenEst = Math.round((query.length + response.length) / 4);
     const costEst = (tokenEst * COST_PER_TOKEN).toFixed(5);
     const costLabel = `~${tokenEst} tokens · ${costEst} €`;
+
+    // ── CodeCarbon estimation ──
+    const co2g = calcCarbon(tokenEst);
+    sessionCarbonMg += co2g * 1000;
+    updateCarbonCounter();
+    const carbonLabel = formatCarbon(co2g);
+    const carbonAnalogyText = co2Analogy(co2g);
+
     const sources = extractSources(response);
-    appendMsg('assistant', response, 'Assistant RAG', sources, costLabel);
+    appendMsg('assistant', response, 'Assistant RAG', sources, costLabel, carbonLabel, carbonAnalogyText);
     chatHistory.push({ role: 'user', content: query });
     chatHistory.push({ role: 'assistant', content: response });
-    if (currentRole === 'prof') saveToProfCache(query, response, costLabel);
+    if (currentRole === 'prof') saveToProfCache(query, response, costLabel, carbonLabel);
   } catch (err) {
     typingEl.remove();
     appendMsg('assistant',
       `⚠️ Connexion à Ollama impossible.\n\nLancez Ollama avec :\n  OLLAMA_ORIGINS=* ollama serve\n\nErreur : ${err.message}`,
-      'Système', [], null);
+      'Système', [], null, null, null);
   }
 
   document.getElementById('send-btn').disabled = false;
@@ -977,17 +1062,25 @@ function extractSources(text) {
     .map(m => m.replace(/\[SOURCE:\s*/, '').replace(']', '').trim());
 }
 
-function appendMsg(role, text, label, sources, cost) {
+function appendMsg(role, text, label, sources, cost, carbon, carbonAnalogy) {
   const c = document.getElementById('chat-messages');
   const isUser = role === 'user';
   const div = document.createElement('div');
   div.className = 'msg ' + role;
+
+  let carbonHtml = '';
+  if (carbon) {
+    const tooltip = carbonAnalogy ? ` title="${carbonAnalogy}"` : '';
+    carbonHtml = `<div class="msg-carbon"${tooltip}>🌿 ${esc(carbon)}</div>`;
+  }
+
   div.innerHTML = `
     <div class="msg-avatar">${isUser ? '👤' : 'ECL'}</div>
     <div class="msg-body">
       <div class="msg-meta">
         <div class="msg-role">${esc(label)}</div>
         ${cost ? `<div class="msg-cost">${esc(cost)}</div>` : ''}
+        ${carbonHtml}
       </div>
       <div class="msg-bubble">${esc(text)}</div>
       ${sources.length ? `<div class="msg-sources">${sources.map(s =>
@@ -1032,8 +1125,8 @@ function formatTime(iso) {
 }
 
 // ── PROF CACHE ─────────────────────────────────────────────────
-function saveToProfCache(question, answer, cost) {
-  profCache.unshift({ question, answer, cost, timestamp: new Date().toISOString(), role: 'Professeur' });
+function saveToProfCache(question, answer, cost, carbon) {
+  profCache.unshift({ question, answer, cost, carbon, timestamp: new Date().toISOString(), role: 'Professeur' });
   if (profCache.length > 50) profCache = profCache.slice(0, 50);
   localStorage.setItem('ecl_prof_cache', JSON.stringify(profCache));
   showSuggestBar();
@@ -1066,7 +1159,10 @@ function renderCache() {
       <div class="cache-entry-a">${esc(e.answer)}</div>
       <div class="cache-entry-footer">
         ${e.cost ? `<div class="cache-entry-cost">${esc(e.cost)}</div>` : '<div></div>'}
-        <div class="cache-entry-cta">Voir la réponse →</div>
+        <div style="display:flex;gap:5px;align-items:center;">
+          ${e.carbon ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:#2E7D32;background:rgba(46,125,50,0.07);border:1px solid rgba(46,125,50,0.22);padding:1px 6px;border-radius:10px;">🌿 ${esc(e.carbon)}</div>` : ''}
+          <div class="cache-entry-cta">Voir la réponse →</div>
+        </div>
       </div>
     </div>`).join('');
 }
@@ -1086,12 +1182,21 @@ function openModal(idx) {
   if (!e) return;
   currentModalEntry = e;
 
-  // Use textContent to safely set text (no XSS, no encoding issues)
   document.getElementById('modal-title').textContent = truncate(e.question, 80);
   document.getElementById('modal-q-block').textContent = e.question;
   document.getElementById('modal-a-block').textContent = e.answer;
   document.getElementById('modal-cost-badge').textContent = e.cost || '';
   document.getElementById('modal-time').textContent = formatTime(e.timestamp);
+
+  // Carbon badge in modal
+  const carbonBadge = document.getElementById('modal-carbon-badge');
+  if (e.carbon) {
+    carbonBadge.textContent = '🌿 ' + e.carbon;
+    carbonBadge.style.display = '';
+  } else {
+    carbonBadge.style.display = 'none';
+  }
+
   document.getElementById('modal-overlay').classList.add('open');
 }
 
