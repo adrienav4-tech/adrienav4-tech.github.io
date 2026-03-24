@@ -681,7 +681,7 @@ header {
   <div class="disclaimer-bar">
     <span class="disclaimer-icon">ℹ️</span>
     <span class="disclaimer-text">
-      <strong>Avis d'utilisation :</strong> Les réponses sont générées par un modèle local (Ollama / qwen2.5:1.5b) et peuvent contenir des erreurs. Le <strong>coût estimatif</strong> (≈ 0,003 €/1 000 tokens) et l'<strong>empreinte carbone</strong> sont calculés selon la méthodologie <strong>CodeCarbon</strong> — puissance CPU ≈ 15 W, PUE 1,2, intensité France <strong>21,7 gCO₂eq/kWh</strong> (RTE 2024). Survolez le badge 🌿 pour l'équivalence pédagogique.
+      <strong>Avis d'utilisation :</strong> Les réponses sont générées via le backend Python (FastAPI + Ollama / qwen2.5:1.5b + ChromaDB). Le <strong>coût estimatif</strong> (≈ 0,003 €/1 000 tokens) et l'<strong>empreinte carbone</strong> sont mesurés en temps réel par <strong>CodeCarbon</strong> côté serveur (intensité France RTE 2024 : 21,7 gCO₂eq/kWh). Survolez le badge 🌿 pour l'équivalence pédagogique.
     </span>
   </div>
 
@@ -1007,28 +1007,28 @@ async function sendMessage() {
   const typingEl = appendTyping();
 
   try {
-    const response = await callOllama(query);
-    typingEl.remove();
-    const tokenEst = Math.round((query.length + response.length) / 4);
-    const costEst = (tokenEst * COST_PER_TOKEN).toFixed(5);
-    const costLabel = `~${tokenEst} tokens · ${costEst} €`;
+    const data = await callBackend(query);
 
-    // ── CodeCarbon estimation ──
-    const co2g = calcCarbon(tokenEst);
+    typingEl.remove();
+
+    // Coût € depuis le backend
+    const costLabel = `~${data.tokens_est} tokens · ${data.cost_eur.toFixed(5)} €`;
+
+    // CO₂ réel mesuré par CodeCarbon (backend Python)
+    const co2g = data.co2_kg * 1000;
     sessionCarbonMg += co2g * 1000;
     updateCarbonCounter();
-    const carbonLabel = formatCarbon(co2g);
-    const carbonAnalogyText = co2Analogy(co2g);
 
-    const sources = extractSources(response);
-    appendMsg('assistant', response, 'Assistant RAG', sources, costLabel, carbonLabel, carbonAnalogyText);
+    const sources = data.sources || extractSources(data.response);
+    appendMsg('assistant', data.response, 'Assistant RAG', sources, costLabel, data.co2_label, data.co2_analogy);
     chatHistory.push({ role: 'user', content: query });
-    chatHistory.push({ role: 'assistant', content: response });
-    if (currentRole === 'prof') saveToProfCache(query, response, costLabel, carbonLabel);
+    chatHistory.push({ role: 'assistant', content: data.response });
+    if (currentRole === 'prof') saveToProfCache(query, data.response, costLabel, data.co2_label);
+
   } catch (err) {
     typingEl.remove();
     appendMsg('assistant',
-      `⚠️ Connexion à Ollama impossible.\n\nLancez Ollama avec :\n  OLLAMA_ORIGINS=* ollama serve\n\nErreur : ${err.message}`,
+      `⚠️ Connexion au backend impossible.\n\nLancez le serveur Python :\n  uvicorn backend:app --reload --port 8000\n\nErreur : ${err.message}`,
       'Système', [], null, null, null);
   }
 
@@ -1036,25 +1036,21 @@ async function sendMessage() {
   scrollBottom();
 }
 
-async function callOllama(query) {
-  const history = chatHistory.slice(-6).map(m =>
-    (m.role === 'user' ? 'Question: ' : 'Réponse: ') + m.content
-  ).join('\n');
+// ── BACKEND API ────────────────────────────────────────────────
+const BACKEND = 'http://localhost:8000';
 
-  const prompt = `Tu es un assistant pédagogique pour les étudiants de l'École Centrale de Lyon. Réponds en français, clairement et de manière structurée. Si pertinent, indique les sources sous la forme [SOURCE: nom_du_cours].
-
-${history}
-Question: ${query}
-Réponse:`;
-
-  const res = await fetch('http://localhost:11434/api/generate', {
+async function callBackend(query) {
+  const res = await fetch(`${BACKEND}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'qwen2.5:1.5b', prompt, stream: false })
+    body: JSON.stringify({ query, history: chatHistory.slice(-6) })
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  return data.response || '(Aucune réponse)';
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+  // renvoie : { response, tokens_est, cost_eur, co2_kg, co2_label, co2_analogy, sources, duration_s }
 }
 
 function extractSources(text) {
@@ -1389,21 +1385,43 @@ function getSampleContent(name) {
   ));
 }
 
-// ── OLLAMA STATUS ──────────────────────────────────────────────
+// ── BACKEND STATUS ─────────────────────────────────────────────
 async function checkOllamaStatus() {
   const dot = document.getElementById('ollama-dot');
   const lbl = document.getElementById('ollama-label');
   try {
-    const res = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(2500) });
+    const res = await fetch(`${BACKEND}/status`, { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
+      const data = await res.json();
       dot.style.cssText = 'background:#2E7D32;box-shadow:0 0 5px #2E7D32;';
-      lbl.textContent = 'ollama · actif';
+      lbl.textContent = `backend · actif · ${data.db_chunks} chunks`;
+      loadRealDocs();  // charge la vraie liste de documents
     } else { setOffline(dot, lbl); }
   } catch { setOffline(dot, lbl); }
 }
+
 function setOffline(dot, lbl) {
   dot.style.cssText = 'background:#C8102E;box-shadow:0 0 5px #C8102E;animation:none;';
-  lbl.textContent = 'ollama · hors ligne';
+  lbl.textContent = 'backend · hors ligne';
+}
+
+async function loadRealDocs() {
+  try {
+    const res = await fetch(`${BACKEND}/docs-list`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.documents || data.documents.length === 0) return;
+
+    // Remplace les MOCK_DOCS par les vrais documents indexés
+    MOCK_DOCS.length = 0;
+    data.documents.forEach(name => {
+      MOCK_DOCS.push({ name: name.replace('.pdf',''), pages: '?', subject: '📚' });
+    });
+    filteredDocs = [...MOCK_DOCS];
+    renderDocs();
+  } catch (e) {
+    // silencieux — les MOCK_DOCS restent en fallback
+  }
 }
 
 checkOllamaStatus();
