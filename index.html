@@ -1412,21 +1412,31 @@ function setOffline(dot, lbl) {
 }
 
 async function loadRealDocs() {
+  const user = "adrienav4-tech";
+  const repo = "adrienav4-tech.github.io";
+  const folder = "db_centrale_lyon";
+  
   try {
-    const res = await fetch(`${BACKEND}/docs-list`);
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data.documents || data.documents.length === 0) return;
-
-    // Remplace les MOCK_DOCS par les vrais documents indexés
-    MOCK_DOCS.length = 0;
-    data.documents.forEach(name => {
-      MOCK_DOCS.push({ name: name.replace('.pdf',''), pages: '?', subject: '📚' });
-    });
-    filteredDocs = [...MOCK_DOCS];
-    renderDocs();
+    const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${folder}`);
+    const files = await res.json();
+    
+    if (Array.isArray(files)) {
+      MOCK_DOCS.length = 0; // On vide les faux documents
+      files.forEach(file => {
+        if (file.name.toLowerCase().endsWith('.pdf')) {
+          MOCK_DOCS.push({
+            name: file.name.replace('.pdf',''),
+            pages: "PDF",
+            subject: "📚",
+            url: file.download_url // URL directe vers le fichier
+          });
+        }
+      });
+      filteredDocs = [...MOCK_DOCS];
+      renderDocs();
+    }
   } catch (e) {
-    // silencieux — les MOCK_DOCS restent en fallback
+    console.error("Erreur chargement GitHub:", e);
   }
 }
 
