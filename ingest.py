@@ -8,7 +8,7 @@ torch.set_num_threads(4)
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings 
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma  # Maj pour utiliser le même module que rag.py
 from codecarbon import EmissionsTracker
 from transformers import AutoTokenizer
 from sentence_transformers import SentenceTransformer
@@ -18,14 +18,13 @@ tracker.start()
 
 print("--- Début de l'indexation des cours ---")
 
-# Chargement PDF
-path_to_pdf = r"C:\Users\adrie\OneDrive\Documents\Centrale Lyon - 4A\ProjetInfo\interface_rag\adrienav4-tech.github.io\rag_centrale"
-loader = PyPDFDirectoryLoader(path_to_pdf)
+# 1. Chargement PDF (Dossier source exclusif)
+loader = PyPDFDirectoryLoader("db_centrale_lyon") 
 docs = loader.load()
 print(f"Documents chargés : {len(docs)} pages")
 
-# Chunking
-model_id = "intfloat/multilingual-e5-base"  # Modèle plus léger
+# 2. Chunking
+model_id = "intfloat/multilingual-e5-base"  
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 text_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
@@ -40,7 +39,7 @@ text_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
 chunks = text_splitter.split_documents(docs)
 print(f"Chunks créés : {len(chunks)}")
 
-# Test du modèle AVANT LangChain
+# 3. Test du modèle AVANT LangChain
 print(f"Chargement et test du modèle : {model_id}...")
 try:
     model = SentenceTransformer(model_id, device='cpu')
@@ -51,7 +50,7 @@ except Exception as e:
     tracker.stop()
     exit(1)
 
-# Embeddings LangChain
+# 4. Embeddings LangChain
 embeddings = HuggingFaceEmbeddings(
     model_name=model_id,
     model_kwargs={'device': 'cpu'},
@@ -63,15 +62,15 @@ for chunk in chunks:
     if not chunk.page_content.startswith("passage: "):
         chunk.page_content = f"passage: {chunk.page_content}"
 
-# Vectorisation
+# 5. Vectorisation (Dossier séparé pour la BDD !)
 print("Début de la vectorisation...")
 vectorstore = Chroma.from_documents(
     documents=chunks,
     embedding=embeddings,
-    persist_directory='db_centrale_lyon',
+    persist_directory='chroma_db',  # NOUVEAU DOSSIER
     collection_metadata={"hnsw:space": "cosine"}
 )
 
-print("Base créée dans : db_centrale_lyon")
+print("Base créée avec succès dans le dossier : chroma_db")
 emissions = tracker.stop()
 print(f"Émissions : {emissions:.4f} kg CO2")

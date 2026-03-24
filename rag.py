@@ -17,7 +17,7 @@ tracker = EmissionsTracker(project_name="RAG_Centrale_Lyon_phase_RAG")
 tracker.start()
 
 # 1. Config Embeddings
-persist_directory = 'db_centrale_lyon'
+persist_directory = 'chroma_db'  # MISE À JOUR DU DOSSIER CIBLE
 model_id = "intfloat/multilingual-e5-base"
 embeddings = HuggingFaceEmbeddings(
     model_name=model_id,
@@ -28,8 +28,7 @@ embeddings = HuggingFaceEmbeddings(
 # 2. Chargement Vectorstore
 vectorstore = Chroma(
     persist_directory=persist_directory,
-    embedding_function=embeddings,
-    collection_name="langchain"
+    embedding_function=embeddings
 )
 retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 
@@ -54,8 +53,12 @@ prompt = PromptTemplate.from_template(template)
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
+# La chaîne passe 'query: ...' au retriever, mais la question pure au prompt
 rag_chain = (
-    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+    {
+        "context": (lambda x: f"query: {x}") | retriever | format_docs, 
+        "question": RunnablePassthrough()
+    }
     | prompt
     | llm
     | StrOutputParser()
@@ -63,12 +66,11 @@ rag_chain = (
 
 # --- TEST ---
 query = "Qu'est-ce que la régression linéaire ?"
-query_for_search = f"query: {query}"
 
-
-print("\n--- GÉNÉRATION EN COURS ---")
-response = rag_chain.invoke(query_for_search)
-print(response)
-
+print(f"\n--- RECHERCHE ET GÉNÉRATION EN COURS POUR : f'{query}' ---")
+# Plus besoin de rajouter "query: " manuellement ici !
+response = rag_chain.invoke(query)
+print("\n" + response + "\n")
 
 emissions = tracker.stop()
+print(f"Émissions : {emissions:.4f} kg CO2")

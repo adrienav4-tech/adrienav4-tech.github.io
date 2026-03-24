@@ -8,8 +8,6 @@ Relie le frontend HTML à :
   - CodeCarbon                   mesure CO₂ réelle par requête
 
 Démarrage :
-    pip install fastapi uvicorn codecarbon langchain-chroma \
-                langchain-huggingface langchain-ollama langchain-core
     uvicorn backend:app --reload --port 8000
 
 Le frontend doit pointer sur http://localhost:8000
@@ -40,7 +38,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
 log = logging.getLogger("ECL-RAG")
 
 # ── Config ─────────────────────────────────────────────────────
-PERSIST_DIR  = "db_centrale_lyon"   # répertoire ChromaDB (à côté de ce fichier)
+PERSIST_DIR  = "chroma_db"   
 MODEL_EMBED  = "intfloat/multilingual-e5-base"
 MODEL_LLM    = "qwen2.5:1.5b"
 TOP_K        = 5                    # nombre de chunks récupérés
@@ -88,7 +86,10 @@ RÉPONSE :"""
 prompt = PromptTemplate.from_template(PROMPT_TEMPLATE)
 
 def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
+    return "\n\n".join(
+        f"--- Début de l'extrait issu de : {os.path.basename(doc.metadata.get('source', 'Inconnu'))} ---\n{doc.page_content}" 
+        for doc in docs
+    )
 
 rag_chain = (
     {"context": retriever | format_docs, "question": RunnablePassthrough()}
@@ -156,9 +157,16 @@ def chat(body: ChatRequest):
     query = body.query.strip()
     if not query:
         raise HTTPException(status_code=400, detail="La question ne peut pas être vide.")
-
-    # Préfixe E5 pour la recherche (identique à ingest.py)
-    query_for_search = f"query: {query}" if not query.startswith("query:") else query
+    
+    rag_chain = (
+        {
+            "context": (lambda x: f"query: {x}") | retriever | format_docs, 
+            "question": RunnablePassthrough()
+        }
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
 
     # ── CodeCarbon ─────────────────────────────────────────────
     tracker = EmissionsTracker(
@@ -172,7 +180,7 @@ def chat(body: ChatRequest):
     tracker.start()
 
     try:
-        response_text = rag_chain.invoke(query_for_search)
+        response_text = rag_chain.invoke(query)
     except Exception as e:
         tracker.stop()
         log.error(f"Erreur RAG : {e}")
