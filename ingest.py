@@ -5,10 +5,10 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import torch
 torch.set_num_threads(4)
 
-from langchain_community.document_loaders import PyPDFDirectoryLoader
+from langchain_community.document_loaders import PyPDFDirectoryLoader, DirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings 
-from langchain_chroma import Chroma  # Maj pour utiliser le même module que rag.py
+from langchain_chroma import Chroma  
 from codecarbon import EmissionsTracker
 from transformers import AutoTokenizer
 from sentence_transformers import SentenceTransformer
@@ -19,7 +19,7 @@ tracker.start()
 print("--- Début de l'indexation des cours ---")
 
 # 1. Chargement PDF (Dossier source exclusif)
-loader = PyPDFDirectoryLoader("db_centrale_lyon") 
+loader = DirectoryLoader("db_centrale_lyon", glob="**/*.pdf", show_progress=True) 
 docs = loader.load()
 print(f"Documents chargés : {len(docs)} pages")
 
@@ -61,6 +61,14 @@ embeddings = HuggingFaceEmbeddings(
 for chunk in chunks:
     if not chunk.page_content.startswith("passage: "):
         chunk.page_content = f"passage: {chunk.page_content}"
+
+if len(chunks) == 0:
+    print("Erreur critique : Aucun chunk n'a été créé.")
+    print("Vérifie que ton PDF contient du texte sélectionnable et que le script est lancé depuis le bon dossier !")
+    tracker.stop()
+    exit(1)
+else:
+    print(f"Aperçu du premier chunk : {chunks[0].page_content[:150]}...")
 
 # 5. Vectorisation (Dossier séparé pour la BDD !)
 print("Début de la vectorisation...")
