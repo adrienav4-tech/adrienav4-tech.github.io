@@ -221,11 +221,11 @@ header {
 /* ── DISCLAIMER ── */
 .disclaimer-bar {
   background: var(--gris-clair); border-bottom: 1px solid var(--gris);
-  padding: 7px 20px;
-  display: flex; align-items: flex-start; gap: 9px;
-  font-size: 11px; color: var(--gris-texte); line-height: 1.55; flex-shrink: 0;
+  padding: 9px 20px;
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 11.5px; color: var(--gris-texte); line-height: 1.55; flex-shrink: 0;
 }
-.disclaimer-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+.disclaimer-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
 .disclaimer-text strong { color: var(--noir); font-weight: 600; }
 
 /* ── PANELS ── */
@@ -289,7 +289,7 @@ header {
   font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--vert);
   background: var(--vert-pale); border: 1px solid var(--vert-border);
   padding: 1px 7px; border-radius: 10px;
-  display: flex; align-items: center; gap: 3px;
+  display: flex; align-items: center; gap: 3px; cursor: help;
 }
 .msg-bubble {
   padding: 11px 15px; border-radius: var(--radius-md);
@@ -629,7 +629,6 @@ header {
 </head>
 <body>
 
-<!-- ── ROLE SCREEN ── -->
 <div id="role-screen">
   <div class="rs-eyebrow">Assistant pédagogique · RAG</div>
   <div class="rs-logo-bar">
@@ -656,7 +655,6 @@ header {
   </div>
 </div>
 
-<!-- ── PASSWORD MODAL ── -->
 <div id="pwd-overlay">
   <div class="pwd-box">
     <div style="display:flex;align-items:center;gap:10px;">
@@ -675,7 +673,6 @@ header {
   </div>
 </div>
 
-<!-- ── APP ── -->
 <div id="app" style="display:none;">
   <header>
     <div class="h-blason">🦁</div>
@@ -703,13 +700,12 @@ header {
   <div class="disclaimer-bar">
     <span class="disclaimer-icon">ℹ️</span>
     <span class="disclaimer-text">
-      <strong>Avis d'utilisation :</strong> Les réponses sont générées via le backend Python (FastAPI + Ollama / qwen2.5:1.5b + ChromaDB). Le <strong>coût estimatif</strong> (≈ 0,003 €/1 000 tokens) et l'<strong>empreinte carbone</strong> sont mesurés en temps réel par <strong>CodeCarbon</strong> côté serveur.
+      <strong>Transparence & Éco-conception :</strong> Ce RAG fonctionne 100% en local. Le <strong>coût en euros</strong> affiché est une estimation pédagogique simulant une facturation Cloud standard (0,003 € / 1k tokens), bien que l'inférence soit gratuite. L'<strong>empreinte carbone</strong> réelle (gCO₂) liée à la consommation électrique du processeur est mesurée par CodeCarbon. <em>Survolez les badges verts pour voir les équivalences.</em>
     </span>
   </div>
 
   <div class="main-area">
 
-    <!-- CHAT -->
     <div class="panel active" id="panel-chat">
       <div class="cache-suggest-bar" id="suggest-bar">
         <span class="cache-suggest-label">Questions prof ·</span>
@@ -737,7 +733,6 @@ header {
       </div>
     </div>
 
-    <!-- DOCUMENTS -->
     <div class="panel" id="panel-docs">
       <div class="doc-sidebar">
         <div class="doc-sidebar-header">
@@ -752,7 +747,6 @@ header {
             Récupération des documents…
           </div>
         </div>
-        <!-- Zone upload visible uniquement pour les profs -->
         <div class="doc-upload-zone" id="upload-zone" style="display:none;">
           <label class="upload-label" for="pdf-upload">
             ＋ Charger un PDF local<br>
@@ -787,7 +781,6 @@ header {
       </div>
     </div>
 
-    <!-- CACHE -->
     <div class="panel" id="panel-cache">
       <div class="cache-page-inner">
         <div class="cache-page-header">
@@ -807,7 +800,6 @@ header {
   </div>
 </div>
 
-<!-- ── MODAL CACHE ── -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalOverlay(event)">
   <div class="modal">
     <div class="modal-header">
@@ -847,6 +839,7 @@ let selectedDocIdx = null;
 let filteredDocs = [];
 let currentModalEntry = null;
 let MOCK_DOCS = [];
+let totalCarbonKg = 0; // Ajout de la variable d'accumulation
 
 // PDF state
 let pdfDoc = null;
@@ -864,6 +857,16 @@ const GH_FOLDER = 'db_centrale_lyon';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── FORMATAGE DU CARBONE GLOBAL ────────────────────────────────
+function formatTotalCarbon(co2_kg) {
+  const co2_g = co2_kg * 1000;
+  if (co2_g === 0) return '0.000 mgCO₂';
+  if (co2_g < 0.000001) return (co2_g * 1000000).toFixed(4) + ' µgCO₂';
+  if (co2_g < 0.001) return (co2_g * 1000).toFixed(4) + ' mgCO₂';
+  if (co2_g < 1) return (co2_g * 1000).toFixed(3) + ' mgCO₂';
+  return co2_g.toFixed(4) + ' gCO₂';
+}
 
 // ── ROLE & NAVIGATION ──────────────────────────────────────────
 function selectRole(role) {
@@ -945,8 +948,16 @@ async function sendMessage() {
   try {
     const data = await callBackend(query);
     typingEl.remove();
+
+    // Mise à jour du compteur global
+    totalCarbonKg += data.co2_kg;
+    document.getElementById('carbon-total-label').textContent = formatTotalCarbon(totalCarbonKg);
+
     const costLabel = `~${data.tokens_est} tokens · ${data.cost_eur.toFixed(5)} €`;
-    appendMsg('assistant', data.response, 'Assistant RAG', data.sources || [], costLabel, data.co2_label);
+    
+    // Appel à appendMsg avec l'analogie pour l'effet de survol
+    appendMsg('assistant', data.response, 'Assistant RAG', data.sources || [], costLabel, data.co2_label, data.co2_analogy);
+    
     chatHistory.push({ role: 'user', content: query });
     chatHistory.push({ role: 'assistant', content: data.response });
     if (currentRole === 'prof') saveToProfCache(query, data.response, costLabel, data.co2_label);
@@ -969,7 +980,8 @@ async function callBackend(query) {
   return res.json();
 }
 
-function appendMsg(role, text, label, sources, cost, carbon) {
+// Ajout du paramètre carbonAnalogy pour gérer l'infobulle (Hover)
+function appendMsg(role, text, label, sources, cost, carbon, carbonAnalogy) {
   const c = document.getElementById('chat-messages');
   const div = document.createElement('div');
   div.className = 'msg ' + role;
@@ -979,7 +991,7 @@ function appendMsg(role, text, label, sources, cost, carbon) {
       <div class="msg-meta">
         <div class="msg-role">${label}</div>
         ${cost ? `<div class="msg-cost">${cost}</div>` : ''}
-        ${carbon ? `<div class="msg-carbon">🌿 ${carbon}</div>` : ''}
+        ${carbon ? `<div class="msg-carbon" title="${carbonAnalogy || ''}">🌿 ${carbon}</div>` : ''}
       </div>
       <div class="msg-bubble">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>
       ${sources && sources.length ? `<div class="msg-sources">${sources.map(s => `<span class="source-chip">📄 ${s}</span>`).join('')}</div>` : ''}
