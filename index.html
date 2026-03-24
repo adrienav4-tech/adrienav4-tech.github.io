@@ -607,7 +607,6 @@ header {
 </head>
 <body>
 
-<!-- ROLE SCREEN -->
 <div id="role-screen">
   <div class="rs-eyebrow">Assistant pédagogique · RAG</div>
   <div class="rs-logo-bar">
@@ -634,7 +633,6 @@ header {
   </div>
 </div>
 
-<!-- PASSWORD OVERLAY -->
 <div id="pwd-overlay">
   <div class="pwd-box">
     <div style="display:flex;align-items:center;gap:10px;">
@@ -653,7 +651,6 @@ header {
   </div>
 </div>
 
-<!-- APP -->
 <div id="app" style="display:none;">
   <header>
     <div class="h-blason">🦁</div>
@@ -681,13 +678,12 @@ header {
   <div class="disclaimer-bar">
     <span class="disclaimer-icon">ℹ️</span>
     <span class="disclaimer-text">
-      <strong>Avis d'utilisation :</strong> Les réponses sont générées via le backend Python (FastAPI + Ollama / qwen2.5:1.5b + ChromaDB). Le <strong>coût estimatif</strong> (≈ 0,003 €/1 000 tokens) et l'<strong>empreinte carbone</strong> sont mesurés en temps réel par <strong>CodeCarbon</strong> côté serveur (intensité France RTE 2024 : 21,7 gCO₂eq/kWh). Survolez le badge 🌿 pour l'équivalence pédagogique.
+      <strong>Avis d'utilisation :</strong> Les réponses sont générées via le backend Python (FastAPI + Ollama / qwen2.5:1.5b + ChromaDB). Le <strong>coût estimatif</strong> (≈ 0,003 €/1 000 tokens) et l'<strong>empreinte carbone</strong> sont mesurés en temps réel par <strong>CodeCarbon</strong> côté serveur.
     </span>
   </div>
 
   <div class="main-area">
 
-    <!-- CHAT -->
     <div class="panel active" id="panel-chat">
       <div class="cache-suggest-bar" id="suggest-bar">
         <span class="cache-suggest-label">Questions prof ·</span>
@@ -698,7 +694,7 @@ header {
           <div class="msg-avatar">ECL</div>
           <div class="msg-body">
             <div class="msg-meta"><div class="msg-role">Assistant RAG</div></div>
-            <div class="msg-bubble" id="welcome-bubble">Bonjour. Posez une question sur vos cours — je recherche dans la base vectorielle de Centrale Lyon.</div>
+            <div class="msg-bubble" id="welcome-bubble">Bonjour. Posez une question sur vos cours.</div>
           </div>
         </div>
       </div>
@@ -715,7 +711,6 @@ header {
       </div>
     </div>
 
-    <!-- DOCS -->
     <div class="panel" id="panel-docs">
       <div class="doc-sidebar">
         <div class="doc-sidebar-header">
@@ -741,13 +736,12 @@ header {
         <div class="pdf-body" id="pdf-body">
           <div class="pdf-placeholder">
             <div class="pdf-placeholder-icon">📄</div>
-            <div class="pdf-placeholder-text">Sélectionnez un document dans la liste<br>ou chargez un PDF local pour le visualiser</div>
+            <div class="pdf-placeholder-text">Sélectionnez un document dans la liste</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- CACHE -->
     <div class="panel" id="panel-cache">
       <div class="cache-page-inner">
         <div class="cache-page-header">
@@ -758,7 +752,7 @@ header {
           <button class="cache-clear-btn" id="cache-clear-btn" onclick="clearCache()">🗑 Vider le cache</button>
         </div>
         <div class="cache-readonly-notice hidden" id="cache-readonly-notice">
-          👁 Mode lecture seule — consultez les questions posées par les professeurs. Cliquez sur une entrée pour voir la réponse complète et réutiliser la question.
+          👁 Mode lecture seule — consultez les questions posées par les professeurs.
         </div>
         <div class="cache-grid" id="cache-grid"></div>
       </div>
@@ -767,7 +761,6 @@ header {
   </div>
 </div>
 
-<!-- CACHE MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalOverlay(event)">
   <div class="modal">
     <div class="modal-header">
@@ -805,175 +798,46 @@ let chatHistory = [];
 let profCache = JSON.parse(localStorage.getItem('ecl_prof_cache') || '[]');
 let selectedDocIdx = null;
 let currentPage = 0;
-let pdfPages = []; // mock text pages
+let pdfPages = [];
 let filteredDocs = [];
 let currentModalEntry = null;
 
-// PDF.js state
-let pdfDoc = null;         // loaded PDF.js document
-let pdfMode = 'mock';      // 'mock' | 'pdfjs'
+let pdfDoc = null;
+let pdfMode = 'mock';
 let totalPdfPages = 0;
 
 const COST_PER_TOKEN = 0.000003;
 const PROF_PASSWORD = 'ECL2024';
-
-// ── CODECARBON — Méthodologie ──────────────────────────────────
-// Basé sur la méthodologie CodeCarbon (mlco2/codecarbon v2.4.1)
-// Modèle : qwen2.5:1.5b tournant sur CPU local
-// Référence : "Small Prompts, Big Energy" (2024), mesures Ollama/CodeCarbon
-//
-// Paramètres :
-//   CPU_POWER_W    : Puissance CPU estimée pour qwen2.5:1.5b en inférence (~15W)
-//                    (source: benchmarks SBC Ollama, modèles 1-2B ≈ 10-20W)
-//   PUE            : Power Usage Effectiveness laptop/desktop ≈ 1.2
-//   TOKENS_PER_SEC : Débit typique qwen2.5:1.5b sur CPU moderne ≈ 20 tok/s
-//   CARBON_FR      : Intensité carbone électricité France 2024 = 21.7 gCO₂eq/kWh
-//                    (source: RTE Bilan électrique 2024)
-//
-// Formule CodeCarbon :
-//   energy_kWh = (tokens / tokens_per_sec) * (CPU_W * PUE) / 3_600_000
-//   co2_g      = energy_kWh * carbon_intensity_gCO2_per_kWh
-
-const CC = {
-  CPU_POWER_W:    15,      // W — consommation CPU pour qwen2.5:1.5b
-  PUE:            1.2,     // Power Usage Effectiveness (laptop/bureau)
-  TOKENS_PER_SEC: 20,      // tokens/s — débit typique qwen2.5:1.5b sur CPU
-  CARBON_FRANCE:  21.7,    // gCO₂eq/kWh — intensité France (RTE 2024)
-};
-
-let sessionCarbonMg = 0;  // cumul session en milligrammes CO₂
-
-function calcCarbon(tokens) {
-  // durée estimée en secondes
-  const durationSec = tokens / CC.TOKENS_PER_SEC;
-  // énergie en kWh
-  const energyKWh = (durationSec * CC.CPU_POWER_W * CC.PUE) / 3_600_000;
-  // CO₂ en grammes
-  const co2g = energyKWh * CC.CARBON_FRANCE;
-  return co2g;
-}
-
-function formatCarbon(co2g) {
-  if (co2g < 0.001) return `${(co2g * 1_000_000).toFixed(2)} µgCO₂`;
-  if (co2g < 1)     return `${(co2g * 1000).toFixed(3)} mgCO₂`;
-  if (co2g < 1000)  return `${co2g.toFixed(4)} gCO₂`;
-  return `${(co2g / 1000).toFixed(6)} kgCO₂`;
-}
-
-function co2Analogy(co2g) {
-  // Analogies pédagogiques pour mettre en perspective
-  const charge_smartphone_g = 8.22; // gCO₂ pour charger un smartphone (source: RTE/ADEME)
-  const km_voiture_g = 120;         // gCO₂/km voiture thermique moyenne
-  const email_g = 4;                // gCO₂ par email envoyé (source: ADEME)
-  const ratio = co2g / charge_smartphone_g;
-  if (co2g < 0.01)   return `≈ ${(co2g / (km_voiture_g/1000)).toFixed(4)} mm en voiture`;
-  if (ratio < 0.001) return `≈ ${(ratio * 1000).toFixed(2)}‰ charge smartphone`;
-  if (ratio < 0.01)  return `≈ ${(ratio * 100).toFixed(3)}% charge smartphone`;
-  return `≈ ${(co2g / email_g * 100).toFixed(3)}% d'un e-mail`;
-}
-
-function updateCarbonCounter() {
-  const el = document.getElementById('carbon-total-label');
-  if (!el) return;
-  const mg = sessionCarbonMg;
-  let label;
-  if (mg < 1)      label = `${mg.toFixed(4)} mgCO₂`;
-  else if (mg < 1000) label = `${mg.toFixed(2)} mgCO₂`;
-  else             label = `${(mg/1000).toFixed(4)} gCO₂`;
-  el.textContent = label + ' session';
-}
+const BACKEND = 'http://localhost:8000';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-const MOCK_DOCS = [
-  { name: "Régression Linéaire",   pages: 24, subject: "ML" },
-  { name: "Algèbre Linéaire",      pages: 38, subject: "Maths" },
-  { name: "Thermodynamique",       pages: 51, subject: "Physique" },
-  { name: "Traitement du Signal",  pages: 30, subject: "Signal" },
-  { name: "Automatique",           pages: 42, subject: "Automatique" },
-  { name: "Analyse Numérique",     pages: 29, subject: "Maths" },
-  { name: "Probabilités",          pages: 35, subject: "Maths" },
-  { name: "Deep Learning",         pages: 60, subject: "ML" },
-];
+let MOCK_DOCS = []; // Sera rempli par l'API GitHub
 
-// ── PASSWORD ───────────────────────────────────────────────────
-function askProfPassword() {
-  const overlay = document.getElementById('pwd-overlay');
-  document.getElementById('pwd-input').value = '';
-  document.getElementById('pwd-error').classList.remove('visible');
-  overlay.classList.add('open');
-  setTimeout(() => document.getElementById('pwd-input').focus(), 120);
-}
-
-function closePwd() {
-  document.getElementById('pwd-overlay').classList.remove('open');
-}
-
-function checkPwd() {
-  const val = document.getElementById('pwd-input').value;
-  if (val === PROF_PASSWORD) {
-    closePwd();
-    selectRole('prof');
-  } else {
-    document.getElementById('pwd-error').classList.add('visible');
-    document.getElementById('pwd-input').value = '';
-    document.getElementById('pwd-input').focus();
-  }
-}
-
-// ── ROLE ───────────────────────────────────────────────────────
+// ── ROLE & NAVIGATION ──────────────────────────────────────────
 function selectRole(role) {
   currentRole = role;
   document.getElementById('role-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-
   const pill = document.getElementById('role-pill');
   pill.className = 'h-role-pill ' + role;
   document.getElementById('role-pill-text').textContent = role === 'prof' ? 'Professeur' : 'Élève';
-
+  
   if (role === 'prof') {
-    document.getElementById('welcome-bubble').textContent =
-      'Bienvenue, Professeur. Vos requêtes seront enregistrées dans le cache partagé et visibles par les élèves.';
     document.getElementById('cache-clear-btn').style.display = '';
     document.getElementById('cache-readonly-notice').classList.add('hidden');
-    document.getElementById('cache-sub').textContent = 'Questions enregistrées — administration complète';
   } else {
-    document.getElementById('welcome-bubble').textContent =
-      'Bonjour ! Je suis votre assistant pédagogique Centrale Lyon. Posez une question sur vos cours.';
     document.getElementById('cache-clear-btn').style.display = 'none';
     document.getElementById('cache-readonly-notice').classList.remove('hidden');
-    document.getElementById('cache-sub').textContent = 'Questions posées par les professeurs — lecture seule';
     showSuggestBar();
   }
-
-  filteredDocs = [...MOCK_DOCS];
-  renderDocs();
+  fetchGitHubDocs();
   renderCache();
   checkOllamaStatus();
 }
 
-function resetRole() {
-  document.getElementById('role-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-  currentRole = null;
-  chatHistory = [];
-  document.getElementById('chat-messages').innerHTML = `
-    <div class="msg assistant">
-      <div class="msg-avatar">ECL</div>
-      <div class="msg-body">
-        <div class="msg-meta"><div class="msg-role">Assistant RAG</div></div>
-        <div class="msg-bubble" id="welcome-bubble">Bonjour.</div>
-      </div>
-    </div>`;
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.h-tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('panel-chat').classList.add('active');
-  document.querySelector('[data-tab="chat"]').classList.add('active');
-  pdfDoc = null;
-  pdfMode = 'mock';
-}
+function resetRole() { location.reload(); }
 
-// ── TABS ───────────────────────────────────────────────────────
 function showTab(tab, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.h-tab').forEach(b => b.classList.remove('active'));
@@ -981,63 +845,31 @@ function showTab(tab, btn) {
   (btn || document.querySelector(`[data-tab="${tab}"]`))?.classList.add('active');
 }
 
-function switchToChat() {
-  showTab('chat', null);
-  setTimeout(() => document.getElementById('chat-input').focus(), 50);
-}
-
 // ── CHAT ───────────────────────────────────────────────────────
-function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-}
-function autoResize(ta) {
-  ta.style.height = 'auto';
-  ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
-}
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 100) + 'px'; }
 
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const query = input.value.trim();
   if (!query) return;
   input.value = '';
-  input.style.height = 'auto';
   document.getElementById('send-btn').disabled = true;
-
   appendMsg('user', query, currentRole === 'prof' ? 'Professeur' : 'Élève', [], null);
   const typingEl = appendTyping();
-
   try {
     const data = await callBackend(query);
-
     typingEl.remove();
-
-    // Coût € depuis le backend
     const costLabel = `~${data.tokens_est} tokens · ${data.cost_eur.toFixed(5)} €`;
-
-    // CO₂ réel mesuré par CodeCarbon (backend Python)
-    const co2g = data.co2_kg * 1000;
-    sessionCarbonMg += co2g * 1000;
-    updateCarbonCounter();
-
-    const sources = data.sources || extractSources(data.response);
-    appendMsg('assistant', data.response, 'Assistant RAG', sources, costLabel, data.co2_label, data.co2_analogy);
-    chatHistory.push({ role: 'user', content: query });
-    chatHistory.push({ role: 'assistant', content: data.response });
+    appendMsg('assistant', data.response, 'Assistant RAG', data.sources || [], costLabel, data.co2_label);
     if (currentRole === 'prof') saveToProfCache(query, data.response, costLabel, data.co2_label);
-
   } catch (err) {
     typingEl.remove();
-    appendMsg('assistant',
-      `⚠️ Connexion au backend impossible.\n\nLancez le serveur Python :\n  uvicorn backend:app --reload --port 8000\n\nErreur : ${err.message}`,
-      'Système', [], null, null, null);
+    appendMsg('assistant', "Erreur connexion backend.", 'Système', [], null);
   }
-
   document.getElementById('send-btn').disabled = false;
   scrollBottom();
 }
-
-// ── BACKEND API ────────────────────────────────────────────────
-const BACKEND = 'http://localhost:8000';
 
 async function callBackend(query) {
   const res = await fetch(`${BACKEND}/chat`, {
@@ -1045,46 +877,23 @@ async function callBackend(query) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, history: chatHistory.slice(-6) })
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `HTTP ${res.status}`);
-  }
   return res.json();
-  // renvoie : { response, tokens_est, cost_eur, co2_kg, co2_label, co2_analogy, sources, duration_s }
 }
 
-function extractSources(text) {
-  return (text.match(/\[SOURCE:\s*([^\]]+)\]/g) || [])
-    .map(m => m.replace(/\[SOURCE:\s*/, '').replace(']', '').trim());
-}
-
-function appendMsg(role, text, label, sources, cost, carbon, carbonAnalogy) {
+function appendMsg(role, text, label, sources, cost, carbon) {
   const c = document.getElementById('chat-messages');
-  const isUser = role === 'user';
   const div = document.createElement('div');
   div.className = 'msg ' + role;
-
-  let carbonHtml = '';
-  if (carbon) {
-    const tooltip = carbonAnalogy ? ` title="${carbonAnalogy}"` : '';
-    carbonHtml = `<div class="msg-carbon"${tooltip}>🌿 ${esc(carbon)}</div>`;
-  }
-
   div.innerHTML = `
-    <div class="msg-avatar">${isUser ? '👤' : 'ECL'}</div>
+    <div class="msg-avatar">${role === 'user' ? '👤' : 'ECL'}</div>
     <div class="msg-body">
       <div class="msg-meta">
-        <div class="msg-role">${esc(label)}</div>
-        ${cost ? `<div class="msg-cost">${esc(cost)}</div>` : ''}
-        ${carbonHtml}
+        <div class="msg-role">${label}</div>
+        ${cost ? `<div class="msg-cost">${cost}</div>` : ''}
       </div>
-      <div class="msg-bubble">${esc(text)}</div>
-      ${sources.length ? `<div class="msg-sources">${sources.map(s =>
-        `<span class="source-chip" onclick="openDoc('${escAttr(s)}')">📄 ${esc(s)}</span>`
-      ).join('')}</div>` : ''}
+      <div class="msg-bubble">${text.replace(/\n/g, '<br>')}</div>
     </div>`;
   c.appendChild(div);
-  scrollBottom();
   return div;
 }
 
@@ -1092,411 +901,88 @@ function appendTyping() {
   const c = document.getElementById('chat-messages');
   const div = document.createElement('div');
   div.className = 'msg assistant';
-  div.innerHTML = `
-    <div class="msg-avatar">ECL</div>
-    <div class="msg-body">
-      <div class="msg-meta"><div class="msg-role">Assistant RAG</div></div>
-      <div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>
-    </div>`;
+  div.innerHTML = `<div class="msg-avatar">ECL</div><div class="msg-body"><div class="msg-bubble">...</div></div>`;
   c.appendChild(div);
-  scrollBottom();
   return div;
 }
 
-function scrollBottom() {
-  const c = document.getElementById('chat-messages');
-  c.scrollTop = c.scrollHeight;
+function scrollBottom() { const c = document.getElementById('chat-messages'); c.scrollTop = c.scrollHeight; }
+
+// ── DOCUMENTS ──────────────────────────────────────────────────
+async function fetchGitHubDocs() {
+  const user = "adrienav4-tech", repo = "adrienav4-tech.github.io", folder = "db_centrale_lyon";
+  try {
+    const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${folder}`);
+    const files = await res.json();
+    if (Array.isArray(files)) {
+      MOCK_DOCS = files.filter(f => f.name.endsWith('.pdf')).map(f => ({
+        name: f.name.replace('.pdf',''),
+        pages: "PDF",
+        subject: "Cours",
+        url: f.download_url
+      }));
+      filteredDocs = [...MOCK_DOCS];
+      renderDocs();
+    }
+  } catch (e) { console.error(e); }
 }
 
-function esc(s) {
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-}
-function escAttr(s) { return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
-function truncate(s, n) { return s.length > n ? s.slice(0, n) + '…' : s; }
-function formatTime(iso) {
-  const d = new Date(iso);
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) + ' · ' +
-         d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-}
-
-// ── PROF CACHE ─────────────────────────────────────────────────
-function saveToProfCache(question, answer, cost, carbon) {
-  profCache.unshift({ question, answer, cost, carbon, timestamp: new Date().toISOString(), role: 'Professeur' });
-  if (profCache.length > 50) profCache = profCache.slice(0, 50);
-  localStorage.setItem('ecl_prof_cache', JSON.stringify(profCache));
-  showSuggestBar();
-  renderCache();
-}
-
-function showSuggestBar() {
-  if (currentRole === 'eleve' && profCache.length > 0) {
-    const bar = document.getElementById('suggest-bar');
-    bar.classList.add('visible');
-    document.getElementById('suggest-pills').innerHTML = profCache.slice(0, 4).map(e =>
-      `<span class="cache-suggest-pill" onclick="injectQuery('${escAttr(e.question)}')">${esc(truncate(e.question, 42))}</span>`
-    ).join('');
-  }
-}
-
-function renderCache() {
-  const grid = document.getElementById('cache-grid');
-  if (profCache.length === 0) {
-    grid.innerHTML = '<div class="cache-empty">Aucune requête dans le cache.<br>Les questions posées via le rôle Professeur apparaîtront ici.</div>';
-    return;
-  }
-  grid.innerHTML = profCache.map((e, i) => `
-    <div class="cache-entry" onclick="openModal(${i})">
-      <div class="cache-entry-top">
-        <div class="cache-entry-role">👤 ${esc(e.role || 'Professeur')}</div>
-        <div class="cache-entry-time">${formatTime(e.timestamp)}</div>
-      </div>
-      <div class="cache-entry-q">${esc(e.question)}</div>
-      <div class="cache-entry-a">${esc(e.answer)}</div>
-      <div class="cache-entry-footer">
-        ${e.cost ? `<div class="cache-entry-cost">${esc(e.cost)}</div>` : '<div></div>'}
-        <div style="display:flex;gap:5px;align-items:center;">
-          ${e.carbon ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:#2E7D32;background:rgba(46,125,50,0.07);border:1px solid rgba(46,125,50,0.22);padding:1px 6px;border-radius:10px;">🌿 ${esc(e.carbon)}</div>` : ''}
-          <div class="cache-entry-cta">Voir la réponse →</div>
-        </div>
-      </div>
-    </div>`).join('');
-}
-
-function clearCache() {
-  if (currentRole !== 'prof') return;
-  if (!confirm('Vider tout le cache des requêtes professeur ?')) return;
-  profCache = [];
-  localStorage.removeItem('ecl_prof_cache');
-  renderCache();
-  document.getElementById('suggest-bar').classList.remove('visible');
-}
-
-// ── MODAL (cache) ──────────────────────────────────────────────
-function openModal(idx) {
-  const e = profCache[idx];
-  if (!e) return;
-  currentModalEntry = e;
-
-  document.getElementById('modal-title').textContent = truncate(e.question, 80);
-  document.getElementById('modal-q-block').textContent = e.question;
-  document.getElementById('modal-a-block').textContent = e.answer;
-  document.getElementById('modal-cost-badge').textContent = e.cost || '';
-  document.getElementById('modal-time').textContent = formatTime(e.timestamp);
-
-  // Carbon badge in modal
-  const carbonBadge = document.getElementById('modal-carbon-badge');
-  if (e.carbon) {
-    carbonBadge.textContent = '🌿 ' + e.carbon;
-    carbonBadge.style.display = '';
-  } else {
-    carbonBadge.style.display = 'none';
-  }
-
-  document.getElementById('modal-overlay').classList.add('open');
-}
-
-function closeModalOverlay(ev) {
-  if (ev.target === document.getElementById('modal-overlay')) closeModalDirect();
-}
-function closeModalDirect() {
-  document.getElementById('modal-overlay').classList.remove('open');
-  currentModalEntry = null;
-}
-function injectFromModal() {
-  if (!currentModalEntry) return;
-  const q = currentModalEntry.question;
-  closeModalDirect();
-  injectQuery(q);
-}
-function injectQuery(q) {
-  switchToChat();
-  const inp = document.getElementById('chat-input');
-  inp.value = q;
-  autoResize(inp);
-  inp.focus();
-}
-
-// ── DOCS ───────────────────────────────────────────────────────
 function renderDocs(filter) {
-  filteredDocs = filter
-    ? MOCK_DOCS.filter(d =>
-        d.name.toLowerCase().includes(filter.toLowerCase()) ||
-        d.subject.toLowerCase().includes(filter.toLowerCase()))
-    : [...MOCK_DOCS];
-
-  document.getElementById('doc-list').innerHTML = filteredDocs.map((d, i) => `
+  const list = document.getElementById('doc-list');
+  const items = filter ? MOCK_DOCS.filter(d => d.name.toLowerCase().includes(filter.toLowerCase())) : MOCK_DOCS;
+  list.innerHTML = items.map((d, i) => `
     <div class="doc-item ${selectedDocIdx === i ? 'active' : ''}" onclick="selectDoc(${i})">
       <div class="doc-item-icon">📄</div>
-      <div class="doc-item-info">
-        <div class="doc-item-name">${d.name}</div>
-        <div class="doc-item-meta">${d.subject} · ${d.pages} pages</div>
-      </div>
+      <div class="doc-item-info"><div class="doc-item-name">${d.name}</div></div>
     </div>`).join('');
 }
 
-function filterDocs(val) { renderDocs(val); }
+function filterDocs(v) { renderDocs(v); }
 
 function selectDoc(idx) {
   selectedDocIdx = idx;
   const doc = filteredDocs[idx];
-  if (!doc) return;
-
-  renderDocs(document.querySelector('.doc-search-input').value);
   document.getElementById('pdf-title').textContent = doc.name;
-
   const pdfBody = document.getElementById('pdf-body');
-
-  // SI LE DOCUMENT VIENT DE GITHUB
-  if (doc.url) {
-    pdfMode = 'url';
-    document.getElementById('page-info').textContent = "Visualisation Directe";
-    document.getElementById('btn-prev').disabled = true;
-    document.getElementById('btn-next').disabled = true;
-    
-    pdfBody.innerHTML = `
-      <div style="width:100%; height:100%; display:flex; flex-direction:column;">
-        <iframe src="${doc.url}" style="width:100%; height:80vh; border:none;" title="${doc.name}"></iframe>
-        <div style="padding:10px; text-align:center;">
-          <a href="${doc.url}" target="_blank" style="color:var(--rouge); font-size:12px; text-decoration:none; font-weight:bold;">
-             📥 Ouvrir/Télécharger le PDF original si l'aperçu ne s'affiche pas
-          </a>
-        </div>
-      </div>`;
-  } 
-  // SINON (Si c'est un mock ou un fichier local chargé à la main)
-  else {
-    pdfDoc = null;
-    pdfMode = 'mock';
-    pdfPages = getSampleContent(doc.name);
-    totalPdfPages = pdfPages.length;
-    currentPage = 0;
-    updateNavButtons();
-    renderMockPage(doc);
-  }
-}
-
-function renderMockPage(doc) {
-  const d = doc || filteredDocs[selectedDocIdx];
-  if (!d) return;
-  document.getElementById('page-info').textContent = `${currentPage + 1} / ${totalPdfPages}`;
-  document.getElementById('pdf-body').innerHTML = `
-    <div class="pdf-page-card">
-      <div class="pdf-page-head">
-        <span>${d.name.toUpperCase()}</span>
-        <span>PAGE ${currentPage + 1} / ${totalPdfPages}</span>
+  
+  // Viewer avec fallback
+  pdfBody.innerHTML = `
+    <div style="width:100%; height:100%; display:flex; flex-direction:column;">
+      <iframe src="${doc.url}" style="width:100%; height:80vh; border:none;"></iframe>
+      <div style="padding:15px; text-align:center;">
+        <a href="https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true" target="_blank" style="color:var(--rouge); font-size:12px; margin-right:15px;">
+           👁️ Forcer l'aperçu (Google Viewer)
+        </a>
+        <a href="${doc.url}" target="_blank" style="color:var(--noir); font-size:12px; font-weight:bold;">
+           📥 Télécharger le PDF
+        </a>
       </div>
-      <div class="pdf-page-text">${pdfPages[currentPage]}</div>
     </div>`;
+  renderDocs(document.querySelector('.doc-search-input').value);
 }
 
-async function renderPdfjsPage() {
-  if (!pdfDoc) return;
-  document.getElementById('page-info').textContent = `${currentPage + 1} / ${totalPdfPages}`;
-  document.getElementById('pdf-body').innerHTML = '<div class="pdf-loading">⏳ Chargement de la page…</div>';
-
-  try {
-    const page = await pdfDoc.getPage(currentPage + 1);
-    const viewport = page.getViewport({ scale: 1.6 });
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    await page.render({ canvasContext: ctx, viewport }).promise;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'pdf-canvas-wrap';
-    wrap.innerHTML = `<div class="pdf-canvas-head"><span>${document.getElementById('pdf-title').textContent.toUpperCase()}</span><span>PAGE ${currentPage + 1} / ${totalPdfPages}</span></div>`;
-    wrap.appendChild(canvas);
-
-    document.getElementById('pdf-body').innerHTML = '';
-    document.getElementById('pdf-body').appendChild(wrap);
-  } catch (err) {
-    document.getElementById('pdf-body').innerHTML = `<div class="pdf-loading">❌ Erreur : ${err.message}</div>`;
-  }
+// ── CACHE & STATUS ─────────────────────────────────────────────
+function renderCache() {
+  const grid = document.getElementById('cache-grid');
+  grid.innerHTML = profCache.map((e, i) => `<div class="cache-entry"><strong>${e.question}</strong><p>${e.answer.slice(0,100)}...</p></div>`).join('');
 }
 
-function changePage(dir) {
-  if (totalPdfPages === 0) return;
-  const next = currentPage + dir;
-  if (next < 0 || next >= totalPdfPages) return;
-  currentPage = next;
-  updateNavButtons();
-  if (pdfMode === 'pdfjs') {
-    renderPdfjsPage();
-  } else {
-    renderMockPage();
-  }
-}
-
-function updateNavButtons() {
-  document.getElementById('btn-prev').disabled = (currentPage === 0);
-  document.getElementById('btn-next').disabled = (currentPage >= totalPdfPages - 1);
-}
-
-function openDoc(name) {
-  showTab('docs', null);
-  filteredDocs = [...MOCK_DOCS];
-  const idx = MOCK_DOCS.findIndex(d => d.name.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
-  if (idx >= 0) { selectedDocIdx = idx; renderDocs(); renderMockPage(MOCK_DOCS[idx]); }
-}
-
-// ── LOAD LOCAL PDF (PDF.js) ────────────────────────────────────
-async function loadLocalPDF(input) {
-  const file = input.files[0];
-  if (!file) return;
-
-  const fileName = file.name;
-  document.getElementById('pdf-title').textContent = fileName;
-  document.getElementById('page-info').textContent = '…';
-  document.getElementById('pdf-body').innerHTML = '<div class="pdf-loading">📖 Chargement du PDF…</div>';
-  document.getElementById('btn-prev').disabled = true;
-  document.getElementById('btn-next').disabled = true;
-
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    pdfMode = 'pdfjs';
-    totalPdfPages = pdfDoc.numPages;
-    currentPage = 0;
-
-    // Add to sidebar list (local)
-    const localEntry = { name: fileName.replace('.pdf',''), pages: totalPdfPages, subject: 'Local' };
-    MOCK_DOCS.unshift(localEntry);
-    filteredDocs = [...MOCK_DOCS];
-    selectedDocIdx = 0;
-    renderDocs();
-    updateNavButtons();
-    renderPdfjsPage();
-  } catch (err) {
-    document.getElementById('pdf-body').innerHTML = `<div class="pdf-loading">❌ Impossible de lire ce PDF : ${err.message}</div>`;
-    pdfDoc = null;
-  }
-  // reset input so same file can be re-loaded
-  input.value = '';
-}
-
-// ── SAMPLE CONTENT ─────────────────────────────────────────────
-function getSampleContent(name) {
-  const db = {
-    "Régression Linéaire": [
-      `1. Introduction\n\nLa régression linéaire modélise la relation entre une variable dépendante Y et des variables indépendantes X.\n\nModèle :\nY = β₀ + β₁X₁ + ... + βₙXₙ + ε\n\nOù ε est le terme d'erreur (bruit gaussien centré).`,
-      `2. Estimation par Moindres Carrés\n\nObjectif : minimiser SSR = Σ(yᵢ - ŷᵢ)²\n\nSolution analytique :\nβ̂ = (XᵀX)⁻¹ Xᵀy\n\nUnique si rang(X) = p (absence de multicolinéarité parfaite).`,
-      `3. Coefficient R²\n\nR² = 1 - SSR/SST, avec SST = Σ(yᵢ - ȳ)²\n\nR² ∈ [0, 1]. Plus R² → 1, meilleur est l'ajustement.\n\nR² ajusté pénalise l'ajout de régresseurs non significatifs.`,
-    ],
-    "Algèbre Linéaire": [
-      `1. Espaces Vectoriels\n\nUn espace vectoriel E sur ℝ vérifie 8 axiomes fondamentaux.\n\nExemples : ℝⁿ, polynômes de degré ≤ n, matrices m×n.`,
-      `2. Applications Linéaires\n\nf : E → F est linéaire ssi :\n  f(u+v) = f(u) + f(v)\n  f(λu) = λf(u)\n\nThéorème du rang : dim(E) = dim(Ker f) + dim(Im f)`,
-      `3. Valeurs Propres\n\nλ valeur propre ⟺ det(A - λI) = 0\n\nPolynôme caractéristique de degré n.\nDiagonalisation : A = PDP⁻¹ si n vecteurs propres indépendants.`,
-    ],
-    "Deep Learning": [
-      `1. Réseaux de Neurones\n\nChaque couche : z = Wx + b, puis a = σ(z)\n\nFonctions d'activation : ReLU, Sigmoid, Tanh, Softmax.`,
-      `2. Rétropropagation\n\nGradients par règle des chaînes :\n∂L/∂W = ∂L/∂a · ∂a/∂z · ∂z/∂W\n\nAutograd calcule ces gradients automatiquement.`,
-      `3. Optimisation\n\nSGD : θ ← θ - η·∇L\n\nAdam : adapte le taux d'apprentissage par paramètre.\nSchedulers : réduction du lr sur plateau, cosine annealing.`,
-    ],
-  };
-  const key = Object.keys(db).find(k => name.includes(k.split(' ')[0]));
-  if (key) return db[key];
-  // Generate generic pages matching the mock page count
-  const doc = MOCK_DOCS.find(d => d.name === name);
-  const n = doc ? Math.min(doc.pages, 5) : 3;
-  return Array.from({ length: n }, (_, i) => (
-    i === 0
-      ? `Introduction — ${name}\n\nFondements du cours.\n\nPlan :\n1. Motivations\n2. Définitions\n3. Méthodes et théorèmes\n4. Applications pratiques\n5. Exercices résolus`
-      : i === n - 1
-      ? `Exercices résolus — ${name}\n\nEx. 1 — Application directe\nEx. 2 — Démonstration\nEx. 3 — Problème ouvert`
-      : `Chapitre ${i + 1} — ${name}\n\nDéveloppement théorique.\nThéorèmes, preuves et exemples illustratifs.`
-  ));
-}
-
-// ── BACKEND STATUS ─────────────────────────────────────────────
 async function checkOllamaStatus() {
   const dot = document.getElementById('ollama-dot');
-  const lbl = document.getElementById('ollama-label');
   try {
-    const res = await fetch(`${BACKEND}/status`, { signal: AbortSignal.timeout(3000) });
-    if (res.ok) {
-      const data = await res.json();
-      dot.style.cssText = 'background:#2E7D32;box-shadow:0 0 5px #2E7D32;';
-      lbl.textContent = `backend · actif · ${data.db_chunks} chunks`;
-      loadRealDocs();  // charge la vraie liste de documents
-    } else { setOffline(dot, lbl); }
-  } catch { setOffline(dot, lbl); }
+    const res = await fetch(`${BACKEND}/status`);
+    dot.style.background = res.ok ? '#2E7D32' : '#C8102E';
+  } catch { dot.style.background = '#C8102E'; }
 }
 
-function setOffline(dot, lbl) {
-  dot.style.cssText = 'background:#C8102E;box-shadow:0 0 5px #C8102E;animation:none;';
-  lbl.textContent = 'backend · hors ligne';
+function askProfPassword() { document.getElementById('pwd-overlay').classList.add('open'); }
+function closePwd() { document.getElementById('pwd-overlay').classList.remove('open'); }
+function checkPwd() {
+  if (document.getElementById('pwd-input').value === PROF_PASSWORD) { closePwd(); selectRole('prof'); }
+  else { document.getElementById('pwd-error').classList.add('visible'); }
 }
 
-async function loadRealDocs() {
-  const user = "adrienav4-tech";
-  const repo = "adrienav4-tech.github.io";
-  const folder = "db_centrale_lyon";
-  
-  try {
-    const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${folder}`);
-    const files = await res.json();
-    
-    if (Array.isArray(files)) {
-      MOCK_DOCS.length = 0; // On vide les faux documents
-      files.forEach(file => {
-        if (file.name.toLowerCase().endsWith('.pdf')) {
-          MOCK_DOCS.push({
-            name: file.name.replace('.pdf',''),
-            pages: "PDF",
-            subject: "📚",
-            url: file.download_url // URL directe vers le fichier
-          });
-        }
-      });
-      filteredDocs = [...MOCK_DOCS];
-      renderDocs();
-    }
-  } catch (e) {
-    console.error("Erreur chargement GitHub:", e);
-  }
-}
-
-// ── RÉCUPÉRATION AUTOMATIQUE GITHUB ──────────────────────────────
-async function fetchGitHubDocs() {
-    const user = "adrienav4-tech";
-    const repo = "adrienav4-tech.github.io";
-    const folder = "db_centrale_lyon"; // Ton dossier contenant les PDF
-    const url = `https://api.github.com/repos/${user}/${repo}/contents/${folder}`;
-
-    try {
-        const response = await fetch(url);
-        const files = await response.json();
-
-        if (Array.isArray(files)) {
-            // On vide la liste de démo
-            MOCK_DOCS.length = 0; 
-
-            files.forEach(file => {
-                if (file.name.toLowerCase().endsWith('.pdf')) {
-                    MOCK_DOCS.push({
-                        name: file.name,
-                        pages: "PDF",
-                        subject: "GitHub",
-                        url: file.download_url // On stocke l'URL directe
-                    });
-                }
-            });
-            // On rafraîchit l'affichage
-            renderDocs();
-        }
-    } catch (error) {
-        console.error("Erreur lors de la récup GitHub:", error);
-    }
-}
-
-// Appeler la fonction au démarrage
-fetchGitHubDocs();
-
-checkOllamaStatus();
-setInterval(checkOllamaStatus, 15000);
+setInterval(checkOllamaStatus, 10000);
 </script>
 </body>
 </html>
