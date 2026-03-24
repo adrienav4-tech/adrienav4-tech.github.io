@@ -916,7 +916,7 @@ async function fetchGitHubDocs() {
     const files = await res.json();
     if (Array.isArray(files)) {
       MOCK_DOCS = files.filter(f => f.name.endsWith('.pdf')).map(f => ({
-        name: f.name.replace('.pdf',''),
+        name: f.name.replace('.pdf', ''),
         pages: "PDF",
         subject: "Cours",
         url: f.download_url
@@ -929,8 +929,11 @@ async function fetchGitHubDocs() {
 
 function renderDocs(filter) {
   const list = document.getElementById('doc-list');
-  const items = filter ? MOCK_DOCS.filter(d => d.name.toLowerCase().includes(filter.toLowerCase())) : MOCK_DOCS;
-  list.innerHTML = items.map((d, i) => `
+  filteredDocs = filter
+    ? MOCK_DOCS.filter(d => d.name.toLowerCase().includes(filter.toLowerCase()))
+    : [...MOCK_DOCS];
+
+  list.innerHTML = filteredDocs.map((d, i) => `
     <div class="doc-item ${selectedDocIdx === i ? 'active' : ''}" onclick="selectDoc(${i})">
       <div class="doc-item-icon">📄</div>
       <div class="doc-item-info"><div class="doc-item-name">${d.name}</div></div>
@@ -941,26 +944,23 @@ function filterDocs(v) { renderDocs(v); }
 
 function selectDoc(idx) {
   selectedDocIdx = idx;
-  const doc = filteredDocs[idx];
+  const doc = filteredDocs[idx];   // ← maintenant cohérent avec l'affichage
   document.getElementById('pdf-title').textContent = doc.name;
   const pdfBody = document.getElementById('pdf-body');
-  
-  // Viewer avec fallback
   pdfBody.innerHTML = `
     <div style="width:100%; height:100%; display:flex; flex-direction:column;">
       <iframe src="${doc.url}" style="width:100%; height:80vh; border:none;"></iframe>
       <div style="padding:15px; text-align:center;">
         <a href="https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true" target="_blank" style="color:var(--rouge); font-size:12px; margin-right:15px;">
-           👁️ Forcer l'aperçu (Google Viewer)
+          👁️ Forcer l'aperçu (Google Viewer)
         </a>
         <a href="${doc.url}" target="_blank" style="color:var(--noir); font-size:12px; font-weight:bold;">
-           📥 Télécharger le PDF
+          📥 Télécharger le PDF
         </a>
       </div>
     </div>`;
   renderDocs(document.querySelector('.doc-search-input').value);
 }
-
 // ── CACHE & STATUS ─────────────────────────────────────────────
 function renderCache() {
   const grid = document.getElementById('cache-grid');
